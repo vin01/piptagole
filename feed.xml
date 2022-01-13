@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.0">Jekyll</generator><link href="https://vin01.github.io/piptagole/piptagole/feed.xml" rel="self" type="application/atom+xml" /><link href="https://vin01.github.io/piptagole/piptagole/" rel="alternate" type="text/html" /><updated>2021-06-16T08:30:04+00:00</updated><id>https://vin01.github.io/piptagole/piptagole/feed.xml</id><title type="html">Vin01’s Blog</title><subtitle>A collection of tidbits which might do some good out there or at least be interesting for some of you.</subtitle><entry><title type="html">Unauthenticated Gitlab SSRF</title><link href="https://vin01.github.io/piptagole/piptagole/gitlab/ssrf/security/2021/06/15/gitlab-ssrf.html" rel="alternate" type="text/html" title="Unauthenticated Gitlab SSRF" /><published>2021-06-15T10:29:00+00:00</published><updated>2021-06-15T10:29:00+00:00</updated><id>https://vin01.github.io/piptagole/piptagole/gitlab/ssrf/security/2021/06/15/gitlab-ssrf</id><content type="html" xml:base="https://vin01.github.io/piptagole/piptagole/gitlab/ssrf/security/2021/06/15/gitlab-ssrf.html">&lt;h3 id=&quot;meet-gitlab-ci-lint-api&quot;&gt;Meet Gitlab &lt;a href=&quot;https://docs.gitlab.com/ee/api/lint.html&quot;&gt;CI Lint API&lt;/a&gt;&lt;/h3&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.0">Jekyll</generator><link href="https://vin01.github.io/piptagole/piptagole/feed.xml" rel="self" type="application/atom+xml" /><link href="https://vin01.github.io/piptagole/piptagole/" rel="alternate" type="text/html" /><updated>2022-01-13T20:39:17+00:00</updated><id>https://vin01.github.io/piptagole/piptagole/feed.xml</id><title type="html">Vin01’s Blog</title><subtitle>A collection of tidbits which might do some good out there or at least be interesting for some of you.</subtitle><entry><title type="html">Unauthenticated Gitlab SSRF</title><link href="https://vin01.github.io/piptagole/piptagole/gitlab/ssrf/security/2021/06/15/gitlab-ssrf.html" rel="alternate" type="text/html" title="Unauthenticated Gitlab SSRF" /><published>2021-06-15T10:29:00+00:00</published><updated>2021-06-15T10:29:00+00:00</updated><id>https://vin01.github.io/piptagole/piptagole/gitlab/ssrf/security/2021/06/15/gitlab-ssrf</id><content type="html" xml:base="https://vin01.github.io/piptagole/piptagole/gitlab/ssrf/security/2021/06/15/gitlab-ssrf.html">&lt;h3 id=&quot;meet-gitlab-ci-lint-api&quot;&gt;Meet Gitlab &lt;a href=&quot;https://docs.gitlab.com/ee/api/lint.html&quot;&gt;CI Lint API&lt;/a&gt;&lt;/h3&gt;
 
 &lt;p&gt;Purpose of the CI Lint API is to validate CI/CD YAML configuration for Gitlab.&lt;/p&gt;
 
@@ -43,4 +43,53 @@
 
 &lt;p&gt;I have also disclosed it directly to &lt;strong&gt;many&lt;/strong&gt; affected organizations (universities, open source projects, governments) but vulnerable public facing instances are still out there. I did not initially intend to blog it, but looking at the number of affected instances, I think it might help spread the word.&lt;/p&gt;
 
-&lt;p&gt;&lt;strong&gt;Please apply latest gitlab security updates ASAP!&lt;/strong&gt;&lt;/p&gt;</content><author><name></name></author><category term="gitlab" /><category term="ssrf" /><category term="security" /><summary type="html">Meet Gitlab CI Lint API</summary></entry></feed>
+&lt;p&gt;&lt;strong&gt;Update&lt;/strong&gt;: Patches before December 2021 (version 14.5.2) did not prevent attacks from &lt;a href=&quot;https://docs.gitlab.com/ee/user/permissions.html#external-users&quot;&gt;external Gitlab users&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Please apply latest gitlab security updates ASAP!&lt;/strong&gt;&lt;/p&gt;</content><author><name></name></author><category term="gitlab" /><category term="ssrf" /><category term="security" /><summary type="html">Meet Gitlab CI Lint API</summary></entry><entry><title type="html">Argument injection in Hagrid keyserver</title><link href="https://vin01.github.io/piptagole/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html" rel="alternate" type="text/html" title="Argument injection in Hagrid keyserver" /><published>2021-06-15T10:29:00+00:00</published><updated>2021-06-15T10:29:00+00:00</updated><id>https://vin01.github.io/piptagole/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection</id><content type="html" xml:base="https://vin01.github.io/piptagole/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html">&lt;h3 id=&quot;what-is-hagrid-&quot;&gt;What is Hagrid ?&lt;/h3&gt;
+
+&lt;p&gt;Hagrid as in, “keeper of keys” is a verifying OpenPGP keyserver, written in Rust, powered by &lt;a href=&quot;https://sequoia-pgp.org/&quot;&gt;Sequoia-PGP&lt;/a&gt; running on &lt;a href=&quot;https://keys.openpgp.org&quot;&gt;https://keys.openpgp.org&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;It was &lt;a href=&quot;https://keys.openpgp.org/about/news#2019-06-12-launch&quot;&gt;launched&lt;/a&gt; on 12 June 2019.&lt;/p&gt;
+
+&lt;p&gt;It is supposed to replace &lt;a href=&quot;https://unix.stackexchange.com/questions/656205/sks-keyservers-gone-what-to-use-instead&quot;&gt;SKS key server&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h3 id=&quot;digging-deeper&quot;&gt;Digging deeper&lt;/h3&gt;
+
+&lt;p&gt;I wanted to take a closer look to find potential security flaws. A key feature potentially with lot of room for vulnerabilities was emali verification. Hagrid supports verifying user IDs with email verification by following a link sent to user’s email address.&lt;/p&gt;
+
+&lt;p&gt;Hagrid uses &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;sendmail&lt;/code&gt; for mailing.&lt;/p&gt;
+
+&lt;p&gt;I also tested &lt;a href=&quot;https://marlam.de/msmtp/&quot;&gt;msmtp&lt;/a&gt; which can be used as &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;sendmail&lt;/code&gt; replacement for Hagrid integration.&lt;/p&gt;
+
+&lt;h3 id=&quot;vulnerability&quot;&gt;Vulnerability&lt;/h3&gt;
+
+&lt;p&gt;Hagrid uses &lt;a href=&quot;https://github.com/lettre/lettre&quot;&gt;lettre&lt;/a&gt; mailing library.&lt;/p&gt;
+
+&lt;p&gt;By crafting email addresses like following, it was possible to make &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;lettre&lt;/code&gt; inject arbitrary flags into final &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;sendmail&lt;/code&gt; command.&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;-bi@example.com    (-bi: Initialize the alias database.)
+-d0.1a@example.com (The option -d0.1 prints the version of sendmail and the options it was compiled with.)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Strace dump from the server running injected sendmail flags:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;28329 execve(&quot;/usr/sbin/sendmail&quot;, [&quot;/usr/sbin/sendmail&quot;, &quot;-i&quot;, &quot;-f&quot;, &quot;noreply@localhost&quot;, &quot;-bi@example.com&quot;], 0x7ffcc8ada608 /* 23 vars */ &amp;lt;unfinished ...&amp;gt;
+28329 sendto(3, &quot;&amp;lt;17&amp;gt;Nov  4 16:48:22 sendmail[28329]: user 1000 attempted to rebuild the alias map&quot;, 81, MSG_NOSIGNAL, NULL, 0) = 81
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;A simple fix was to use &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;sendmail&lt;/code&gt;’s &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;--&lt;/code&gt; flag to treat argument &lt;em&gt;only&lt;/em&gt; as an email address.&lt;/p&gt;
+
+&lt;p&gt;From &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;man&lt;/code&gt;:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;--  Stop processing command flags and use the rest of the arguments as addresses. 
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;disclosure-impact-and-remediation&quot;&gt;Disclosure, impact and remediation&lt;/h3&gt;
+
+&lt;p&gt;I disaclosed it to both Hagrid and Lettre maintainrs who weree very fast in thwir response. (5 Nov. 2020)&lt;/p&gt;
+
+&lt;p&gt;Vincent applied the hotfix to Hagrid &lt;a href=&quot;https://gitlab.com/hagrid-keyserver/hagrid/-/commit/612b58dd595f42c15e6d406cf7e8e030c8461f01&quot;&gt;on the same day&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://github.com/lettre/lettre/security/advisories/GHSA-vc2p-r46x-m3vx&quot;&gt;Advisory&lt;/a&gt; from lettre within a week.&lt;/p&gt;
+
+&lt;p&gt;It was assigned &lt;a href=&quot;https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-28247&quot;&gt;CVE-2020-28247&lt;/a&gt;.&lt;/p&gt;</content><author><name></name></author><category term="pgp" /><category term="security" /><category term="hagrid" /><summary type="html">What is Hagrid ?</summary></entry></feed>

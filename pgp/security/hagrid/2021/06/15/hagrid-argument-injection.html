@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>Argument injection in Hagrid keyserver | Vin01’s Blog</title>
+<meta name="generator" content="Jekyll v4.2.0" />
+<meta property="og:title" content="Argument injection in Hagrid keyserver" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="What is Hagrid ?" />
+<meta property="og:description" content="What is Hagrid ?" />
+<link rel="canonical" href="https://vin01.github.io/piptagole/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html" />
+<meta property="og:url" content="https://vin01.github.io/piptagole/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html" />
+<meta property="og:site_name" content="Vin01’s Blog" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2021-06-15T10:29:00+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Argument injection in Hagrid keyserver" />
+<script type="application/ld+json">
+{"@type":"BlogPosting","description":"What is Hagrid ?","url":"https://vin01.github.io/piptagole/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html","headline":"Argument injection in Hagrid keyserver","dateModified":"2021-06-15T10:29:00+00:00","datePublished":"2021-06-15T10:29:00+00:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://vin01.github.io/piptagole/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html"},"@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/piptagole/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://vin01.github.io/piptagole/piptagole/feed.xml" title="Vin01&apos;s Blog" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/piptagole/">Vin01&#39;s Blog</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/piptagole/about/">About</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Argument injection in Hagrid keyserver</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2021-06-15T10:29:00+00:00" itemprop="datePublished">Jun 15, 2021
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <h3 id="what-is-hagrid-">What is Hagrid ?</h3>
+
+<p>Hagrid as in, “keeper of keys” is a verifying OpenPGP keyserver, written in Rust, powered by <a href="https://sequoia-pgp.org/">Sequoia-PGP</a> running on <a href="https://keys.openpgp.org">https://keys.openpgp.org</a>.</p>
+
+<p>It was <a href="https://keys.openpgp.org/about/news#2019-06-12-launch">launched</a> on 12 June 2019.</p>
+
+<p>It is supposed to replace <a href="https://unix.stackexchange.com/questions/656205/sks-keyservers-gone-what-to-use-instead">SKS key server</a>.</p>
+
+<h3 id="digging-deeper">Digging deeper</h3>
+
+<p>I wanted to take a closer look to find potential security flaws. A key feature potentially with lot of room for vulnerabilities was emali verification. Hagrid supports verifying user IDs with email verification by following a link sent to user’s email address.</p>
+
+<p>Hagrid uses <code class="language-plaintext highlighter-rouge">sendmail</code> for mailing.</p>
+
+<p>I also tested <a href="https://marlam.de/msmtp/">msmtp</a> which can be used as <code class="language-plaintext highlighter-rouge">sendmail</code> replacement for Hagrid integration.</p>
+
+<h3 id="vulnerability">Vulnerability</h3>
+
+<p>Hagrid uses <a href="https://github.com/lettre/lettre">lettre</a> mailing library.</p>
+
+<p>By crafting email addresses like following, it was possible to make <code class="language-plaintext highlighter-rouge">lettre</code> inject arbitrary flags into final <code class="language-plaintext highlighter-rouge">sendmail</code> command.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>-bi@example.com    (-bi: Initialize the alias database.)
+-d0.1a@example.com (The option -d0.1 prints the version of sendmail and the options it was compiled with.)
+</code></pre></div></div>
+
+<p>Strace dump from the server running injected sendmail flags:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>28329 execve("/usr/sbin/sendmail", ["/usr/sbin/sendmail", "-i", "-f", "noreply@localhost", "-bi@example.com"], 0x7ffcc8ada608 /* 23 vars */ &lt;unfinished ...&gt;
+28329 sendto(3, "&lt;17&gt;Nov  4 16:48:22 sendmail[28329]: user 1000 attempted to rebuild the alias map", 81, MSG_NOSIGNAL, NULL, 0) = 81
+</code></pre></div></div>
+
+<p>A simple fix was to use <code class="language-plaintext highlighter-rouge">sendmail</code>’s <code class="language-plaintext highlighter-rouge">--</code> flag to treat argument <em>only</em> as an email address.</p>
+
+<p>From <code class="language-plaintext highlighter-rouge">man</code>:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>--  Stop processing command flags and use the rest of the arguments as addresses. 
+</code></pre></div></div>
+
+<h3 id="disclosure-impact-and-remediation">Disclosure, impact and remediation</h3>
+
+<p>I disaclosed it to both Hagrid and Lettre maintainrs who weree very fast in thwir response. (5 Nov. 2020)</p>
+
+<p>Vincent applied the hotfix to Hagrid <a href="https://gitlab.com/hagrid-keyserver/hagrid/-/commit/612b58dd595f42c15e6d406cf7e8e030c8461f01">on the same day</a></p>
+
+<p><a href="https://github.com/lettre/lettre/security/advisories/GHSA-vc2p-r46x-m3vx">Advisory</a> from lettre within a week.</p>
+
+<p>It was assigned <a href="https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-28247">CVE-2020-28247</a>.</p>
+
+  </div><a class="u-url" href="/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/piptagole/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Vin01&#39;s Blog</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name"><li>vinci+ghp [at] protonmail.ch</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/vin01"><svg class="svg-icon"><use xlink:href="/piptagole/assets/minima-social-icons.svg#github"></use></svg> <span class="username">vin01</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>A collection of tidbits which might do some good out there or at least be interesting for some of you.</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>
