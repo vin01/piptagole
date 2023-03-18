@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.2">Jekyll</generator><link href="https://vin01.github.io/piptagole/feed.xml" rel="self" type="application/atom+xml" /><link href="https://vin01.github.io/piptagole/" rel="alternate" type="text/html" /><updated>2023-03-17T21:59:41+00:00</updated><id>https://vin01.github.io/piptagole/feed.xml</id><title type="html">Vin01’s Blog</title><subtitle>A collection of tidbits which might do some good out there or at least be interesting for some of you.</subtitle><entry><title type="html">Argument injection in Hagrid keyserver</title><link href="https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html" rel="alternate" type="text/html" title="Argument injection in Hagrid keyserver" /><published>2021-06-15T23:25:23+00:00</published><updated>2021-06-15T23:25:23+00:00</updated><id>https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection</id><content type="html" xml:base="https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html"><![CDATA[<p>### What is Hagrid ?</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.2">Jekyll</generator><link href="https://vin01.github.io/piptagole/feed.xml" rel="self" type="application/atom+xml" /><link href="https://vin01.github.io/piptagole/" rel="alternate" type="text/html" /><updated>2023-03-18T19:18:41+00:00</updated><id>https://vin01.github.io/piptagole/feed.xml</id><title type="html">Vin01’s Blog</title><subtitle>A collection of tidbits which might do some good out there or at least be interesting for some of you.</subtitle><entry><title type="html">Argument injection in Hagrid keyserver</title><link href="https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html" rel="alternate" type="text/html" title="Argument injection in Hagrid keyserver" /><published>2021-06-15T23:25:23+00:00</published><updated>2021-06-15T23:25:23+00:00</updated><id>https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection</id><content type="html" xml:base="https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html"><![CDATA[<h3 id="what-is-hagrid-">What is Hagrid ?</h3>
 
 <p>Hagrid as in, “keeper of keys” is a verifying OpenPGP keyserver, written in Rust, powered by <a href="https://sequoia-pgp.org/">Sequoia-PGP</a> running on .</p>
 
@@ -20,28 +20,23 @@
 
 <p>By crafting email addresses like following, it was possible to make <code class="language-plaintext highlighter-rouge">lettre</code> inject arbitrary flags into final <code class="language-plaintext highlighter-rouge">sendmail</code> command.</p>
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code></code></pre></div></div>
-<p>-bi@example.com    (-bi: Initialize the alias database.)
--d0.1a@example.com (The option -d0.1 prints the version of sendmail and the options it was compiled with.)</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>-bi@example.com    (-bi: Initialize the alias database.)
+-d0.1a@example.com (The option -d0.1 prints the version of sendmail and the options it was compiled with.)
+</code></pre></div></div>
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code></code></pre></div></div>
+<p><code class="language-plaintext highlighter-rouge">strace</code> dump from the server running injected sendmail flags:</p>
 
-<p>Strace dump from the server running injected sendmail flags:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>28329 execve("/usr/sbin/sendmail", ["/usr/sbin/sendmail", "-i", "-f", "noreply@localhost", "-bi@example.com"], 0x7ffcc8ada608 /* 23 vars */ 
+28329 sendto(3, "Nov  4 16:48:22 sendmail[28329]: user 1000 attempted to rebuild the alias map", 81, MSG_NOSIGNAL, NULL, 0) = 81
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code></code></pre></div></div>
-<p>28329 execve(“/usr/sbin/sendmail”, [“/usr/sbin/sendmail”, “-i”, “-f”, “noreply@localhost”, “-bi@example.com”], 0x7ffcc8ada608 /* 23 vars */ 
-28329 sendto(3, “Nov  4 16:48:22 sendmail[28329]: user 1000 attempted to rebuild the alias map”, 81, MSG_NOSIGNAL, NULL, 0) = 81</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code></code></pre></div></div>
+</code></pre></div></div>
 
 <p>A simple fix was to use <code class="language-plaintext highlighter-rouge">sendmail</code>’s <code class="language-plaintext highlighter-rouge">--</code> flag to treat argument <em>only</em> as an email address.</p>
 
 <p>From <code class="language-plaintext highlighter-rouge">man</code>:</p>
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code></code></pre></div></div>
-<p>–  Stop processing command flags and use the rest of the arguments as addresses.</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code></code></pre></div></div>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>--  Stop processing command flags and use the rest of the arguments as addresses. 
+</code></pre></div></div>
 
 <h3 id="disclosure-impact-and-remediation">Disclosure, impact and remediation</h3>
 
@@ -51,19 +46,7 @@
 
 <p><a href="https://github.com/lettre/lettre/security/advisories/GHSA-vc2p-r46x-m3vx">Advisory</a> from lettre within a week.</p>
 
-<p>It was assigned <a href="https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-28247">CVE-2020-28247</a>.</p>
-
-<h2 id="---vin01s-blog"><a href="/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html"></a>   Vin01’s Blog</h2>
-
-<ul>
-  <li></li>
-  <li>
-    <p>vinci+ghp [at] protonmail.ch</p>
-  </li>
-  <li><a href="https://github.com/vin01"> vin01</a></li>
-</ul>
-
-<p>A collection of tidbits which might do some good out there or at least be interesting for some of you.</p>]]></content><author><name></name></author><category term="pgp" /><category term="security" /><category term="hagrid" /><summary type="html"><![CDATA[### What is Hagrid ?]]></summary></entry><entry><title type="html">Unauthenticated Gitlab SSRF</title><link href="https://vin01.github.io/piptagole/gitlab/ssrf/security/bugbounty/2021/06/15/gitlab-ssrf.html" rel="alternate" type="text/html" title="Unauthenticated Gitlab SSRF" /><published>2021-06-15T20:25:23+00:00</published><updated>2021-06-15T20:25:23+00:00</updated><id>https://vin01.github.io/piptagole/gitlab/ssrf/security/bugbounty/2021/06/15/gitlab-ssrf</id><content type="html" xml:base="https://vin01.github.io/piptagole/gitlab/ssrf/security/bugbounty/2021/06/15/gitlab-ssrf.html"><![CDATA[<p>### Meet Gitlab <a href="https://docs.gitlab.com/ee/api/lint.html">CI Lint API</a></p>
+<p>It was assigned <a href="https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-28247">CVE-2020-28247</a>.</p>]]></content><author><name></name></author><category term="pgp" /><category term="security" /><category term="hagrid" /><summary type="html"><![CDATA[What is Hagrid ?]]></summary></entry><entry><title type="html">Unauthenticated Gitlab SSRF</title><link href="https://vin01.github.io/piptagole/gitlab/ssrf/security/bugbounty/2021/06/15/gitlab-ssrf.html" rel="alternate" type="text/html" title="Unauthenticated Gitlab SSRF" /><published>2021-06-15T20:25:23+00:00</published><updated>2021-06-15T20:25:23+00:00</updated><id>https://vin01.github.io/piptagole/gitlab/ssrf/security/bugbounty/2021/06/15/gitlab-ssrf</id><content type="html" xml:base="https://vin01.github.io/piptagole/gitlab/ssrf/security/bugbounty/2021/06/15/gitlab-ssrf.html"><![CDATA[<h3 id="meet-gitlab-ci-lint-api">Meet Gitlab <a href="https://docs.gitlab.com/ee/api/lint.html">CI Lint API</a></h3>
 
 <p>Purpose of the CI Lint API is to validate CI/CD YAML configuration for Gitlab.</p>
 
@@ -113,16 +96,4 @@
 
 <p><strong>Update</strong>: Patches before December 2021 (version 14.5.2) did not prevent attacks from <a href="https://docs.gitlab.com/ee/user/permissions.html#external-users">external Gitlab users</a>.</p>
 
-<p><strong>Please apply latest gitlab security updates ASAP!</strong></p>
-
-<h2 id="---vin01s-blog"><a href="/piptagole/gitlab/ssrf/security/2021/06/15/gitlab-ssrf.html"></a>   Vin01’s Blog</h2>
-
-<ul>
-  <li></li>
-  <li>
-    <p>vinci+ghp [at] protonmail.ch</p>
-  </li>
-  <li><a href="https://github.com/vin01"> vin01</a></li>
-</ul>
-
-<p>A collection of tidbits which might do some good out there or at least be interesting for some of you.</p>]]></content><author><name></name></author><category term="gitlab" /><category term="ssrf" /><category term="security" /><category term="bugbounty" /><summary type="html"><![CDATA[### Meet Gitlab CI Lint API]]></summary></entry></feed>
+<p><strong>Please apply latest gitlab security updates ASAP!</strong></p>]]></content><author><name></name></author><category term="gitlab" /><category term="ssrf" /><category term="security" /><category term="bugbounty" /><summary type="html"><![CDATA[Meet Gitlab CI Lint API]]></summary></entry></feed>

@@ -7,8 +7,8 @@
 <meta name="generator" content="Jekyll v4.3.2" />
 <meta property="og:title" content="Argument injection in Hagrid keyserver" />
 <meta property="og:locale" content="en_US" />
-<meta name="description" content="### What is Hagrid ?" />
-<meta property="og:description" content="### What is Hagrid ?" />
+<meta name="description" content="What is Hagrid ?" />
+<meta property="og:description" content="What is Hagrid ?" />
 <link rel="canonical" href="https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html" />
 <meta property="og:url" content="https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html" />
 <meta property="og:site_name" content="Vin01’s Blog" />
@@ -17,7 +17,7 @@
 <meta name="twitter:card" content="summary" />
 <meta property="twitter:title" content="Argument injection in Hagrid keyserver" />
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2021-06-15T23:25:23+00:00","datePublished":"2021-06-15T23:25:23+00:00","description":"### What is Hagrid ?","headline":"Argument injection in Hagrid keyserver","mainEntityOfPage":{"@type":"WebPage","@id":"https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html"},"url":"https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html"}</script>
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2021-06-15T23:25:23+00:00","datePublished":"2021-06-15T23:25:23+00:00","description":"What is Hagrid ?","headline":"Argument injection in Hagrid keyserver","mainEntityOfPage":{"@type":"WebPage","@id":"https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html"},"url":"https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html"}</script>
 <!-- End Jekyll SEO tag -->
 <link rel="stylesheet" href="/piptagole/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://vin01.github.io/piptagole/feed.xml" title="Vin01&apos;s Blog" /></head>
 <body><header class="site-header" role="banner">
@@ -47,7 +47,7 @@
   </header>
 
   <div class="post-content e-content" itemprop="articleBody">
-    <p>### What is Hagrid ?</p>
+    <h3 id="what-is-hagrid-">What is Hagrid ?</h3>
 
 <p>Hagrid as in, “keeper of keys” is a verifying OpenPGP keyserver, written in Rust, powered by <a href="https://sequoia-pgp.org/">Sequoia-PGP</a> running on .</p>
 
@@ -69,28 +69,23 @@
 
 <p>By crafting email addresses like following, it was possible to make <code class="language-plaintext highlighter-rouge">lettre</code> inject arbitrary flags into final <code class="language-plaintext highlighter-rouge">sendmail</code> command.</p>
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code></code></pre></div></div>
-<p>-bi@example.com    (-bi: Initialize the alias database.)
--d0.1a@example.com (The option -d0.1 prints the version of sendmail and the options it was compiled with.)</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>-bi@example.com    (-bi: Initialize the alias database.)
+-d0.1a@example.com (The option -d0.1 prints the version of sendmail and the options it was compiled with.)
+</code></pre></div></div>
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code></code></pre></div></div>
+<p><code class="language-plaintext highlighter-rouge">strace</code> dump from the server running injected sendmail flags:</p>
 
-<p>Strace dump from the server running injected sendmail flags:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>28329 execve("/usr/sbin/sendmail", ["/usr/sbin/sendmail", "-i", "-f", "noreply@localhost", "-bi@example.com"], 0x7ffcc8ada608 /* 23 vars */ 
+28329 sendto(3, "Nov  4 16:48:22 sendmail[28329]: user 1000 attempted to rebuild the alias map", 81, MSG_NOSIGNAL, NULL, 0) = 81
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code></code></pre></div></div>
-<p>28329 execve(“/usr/sbin/sendmail”, [“/usr/sbin/sendmail”, “-i”, “-f”, “noreply@localhost”, “-bi@example.com”], 0x7ffcc8ada608 /* 23 vars */ 
-28329 sendto(3, “Nov  4 16:48:22 sendmail[28329]: user 1000 attempted to rebuild the alias map”, 81, MSG_NOSIGNAL, NULL, 0) = 81</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code></code></pre></div></div>
+</code></pre></div></div>
 
 <p>A simple fix was to use <code class="language-plaintext highlighter-rouge">sendmail</code>’s <code class="language-plaintext highlighter-rouge">--</code> flag to treat argument <em>only</em> as an email address.</p>
 
 <p>From <code class="language-plaintext highlighter-rouge">man</code>:</p>
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code></code></pre></div></div>
-<p>–  Stop processing command flags and use the rest of the arguments as addresses.</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code></code></pre></div></div>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>--  Stop processing command flags and use the rest of the arguments as addresses. 
+</code></pre></div></div>
 
 <h3 id="disclosure-impact-and-remediation">Disclosure, impact and remediation</h3>
 
@@ -101,19 +96,6 @@
 <p><a href="https://github.com/lettre/lettre/security/advisories/GHSA-vc2p-r46x-m3vx">Advisory</a> from lettre within a week.</p>
 
 <p>It was assigned <a href="https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-28247">CVE-2020-28247</a>.</p>
-
-<h2 id="---vin01s-blog"><a href="/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html"></a>   Vin01’s Blog</h2>
-
-<ul>
-  <li></li>
-  <li>
-    <p>vinci+ghp [at] protonmail.ch</p>
-  </li>
-  <li><a href="https://github.com/vin01"> vin01</a></li>
-</ul>
-
-<p>A collection of tidbits which might do some good out there or at least be interesting for some of you.</p>
-
 
   </div><a class="u-url" href="/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html" hidden></a>
 </article>
