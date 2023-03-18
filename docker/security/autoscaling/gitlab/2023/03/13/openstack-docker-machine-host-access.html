@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Self-hosted github actions using docker machine and gitlab runners | Vin01’s Blog</title>
+<meta name="generator" content="Jekyll v4.3.2" />
+<meta property="og:title" content="Self-hosted github actions using docker machine and gitlab runners" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="What is docker machine?" />
+<meta property="og:description" content="What is docker machine?" />
+<link rel="canonical" href="https://vin01.github.io/piptagole/docker/security/autoscaling/gitlab/2023/03/13/openstack-docker-machine-host-access.html" />
+<meta property="og:url" content="https://vin01.github.io/piptagole/docker/security/autoscaling/gitlab/2023/03/13/openstack-docker-machine-host-access.html" />
+<meta property="og:site_name" content="Vin01’s Blog" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2023-03-13T23:25:23+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Self-hosted github actions using docker machine and gitlab runners" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2023-03-13T23:25:23+00:00","datePublished":"2023-03-13T23:25:23+00:00","description":"What is docker machine?","headline":"Self-hosted github actions using docker machine and gitlab runners","mainEntityOfPage":{"@type":"WebPage","@id":"https://vin01.github.io/piptagole/docker/security/autoscaling/gitlab/2023/03/13/openstack-docker-machine-host-access.html"},"url":"https://vin01.github.io/piptagole/docker/security/autoscaling/gitlab/2023/03/13/openstack-docker-machine-host-access.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/piptagole/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://vin01.github.io/piptagole/feed.xml" title="Vin01&apos;s Blog" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/piptagole/">Vin01&#39;s Blog</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/piptagole/about/">About</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Self-hosted github actions using docker machine and gitlab runners</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2023-03-13T23:25:23+00:00" itemprop="datePublished">Mar 13, 2023
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <h2 id="what-is-docker-machine">What is docker machine?</h2>
+
+<p><a href="https://github.com/docker/machine/tree/master/drivers">Docker machine</a> was a cool project started in 2014 by Docker which allowed managing remote virtual machines on different providers like AWS, Rackspace and also using drivers like openstack to support managing virtual machines on self-hosted deployments. The primary feature was to automatically install docker on remote hosts and configure docker client to connect to them using docker api (it automagically managed tls certificates, authentication etc.).</p>
+
+<blockquote>
+  <p>It creates servers, installs Docker on them, then configures the Docker client to talk to them. (from project’s readme)</p>
+</blockquote>
+
+<h2 id="gitlab-supports-autoscaling-for-cicd-and-self-hosted-runners">Gitlab supports autoscaling for ci/cd and self-hosted runners</h2>
+
+<p>Docker <a href="https://github.com/docker/roadmap/issues/245">discontinued</a> maintaining it but Gitlab <a href="https://gitlab.com/gitlab-org/ci-cd/docker-machine">maintains a fork</a> which is currently the <a href="https://docs.gitlab.com/runner/configuration/autoscale.html">preferred mechanism</a> to provide autoscaling solution for self-hosted runners.</p>
+
+<p>Gitlab does intend to replace docker-machine eventually but it has not happened so far.</p>
+
+<p>A couple of open issues with more details:</p>
+
+<ul>
+  <li><a href="https://gitlab.com/groups/gitlab-org/-/epics/2502">Autoscaling Provider for GitLab Runner to replace Docker Machine</a></li>
+  <li><a href="https://gitlab.com/groups/gitlab-org/-/epics/6995">Docker Machine Replacement Project Plan</a></li>
+</ul>
+
+<h2 id="executing-code-on-the-virtual-machines-instead-of-docker-containers">Executing code on the virtual machines instead of docker containers</h2>
+
+<p>This approach alloww using <a href="https://docs.gitlab.com/runner/configuration/runner_autoscale_aws/"><code class="language-plaintext highlighter-rouge">docker</code> executor</a> on a cluster of auto-scaling vms which is not very helpful if you intend to test infrastructure which might include things like:</p>
+
+<ul>
+  <li>systemd</li>
+  <li>iptables</li>
+  <li>system level tracing</li>
+</ul>
+
+<p>It is possible to <a href="https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-socket-binding">mount docker socket</a> from the host to containers running the ci/cd jobs, although better alternatives like <a href="https://docs.gitlab.com/ee/ci/docker/using_kaniko.html">kaniko</a> might be better in general but that is not going to useful for our use case so we are going to need a mounted docker socket for docker executor ;)</p>
+
+<p>sample runner config to allow mounting docker socket:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  [runners.docker]
+    tls_verify = false
+    image = "docker:20.10.16"
+    privileged = false
+    disable_cache = false
+    volumes = ["/var/run/docker.sock:/var/run/docker.sock", "/cache"]
+</code></pre></div></div>
+
+<h2 id="docker-socket-access-in-container--root-on-the-host">Docker socket access in container == root on the host</h2>
+
+<p>Docker mostly runs as root on the host and granting a user access to docker group (which allows accessing docker socket) is equivalent to granting that user root access unless <a href="https://docs.docker.com/engine/security/userns-remap/">user namespacing</a> is in use or docker is running in <a href="https://docs.docker.com/engine/security/rootless/">rootless mode</a>.</p>
+
+<p>We can utilize this fact to escape out of the docker containers running on an autoscaling cluster and instead execute scripts on the hosts themselves.</p>
+
+<p>example ci config for gitlab:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>stages:
+  - test
+
+test:
+  stage: test
+  image: alpine:latest
+  script:
+    - apk add docker
+    - apk add openssh
+    - ssh-keygen -t ed25519 -N '' -f ed25519
+    - docker run --rm -v /:/host alpine sh -c "echo \"$(cat ed25519.pub)\" &gt;&gt; /host/home/ubuntu/.ssh/authorized_keys"
+    - host_ip=$(docker run --rm --net host alpine sh -c "ip route get 1| awk  '{print \$NF}'") &amp;&amp; echo $host_ip
+    - |
+      ssh -t -o StrictHostKeyChecking=no -i ./ed25519 ubuntu@$host_ip &lt;&lt;'END_TESTS'
+      echo "running tests .."
+      END_TESTS
+</code></pre></div></div>
+
+<p>This approach also makes sure that exit codes are passed on from the commands executed over ssh to container running the job.</p>
+
+  </div><a class="u-url" href="/piptagole/docker/security/autoscaling/gitlab/2023/03/13/openstack-docker-machine-host-access.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/piptagole/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Vin01&#39;s Blog</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Vin01&#39;s Blog</li><li><a class="u-email" href="mailto:vinci+ghp [at] protonmail.ch">vinci+ghp [at] protonmail.ch</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/vin01"><svg class="svg-icon"><use xlink:href="/piptagole/assets/minima-social-icons.svg#github"></use></svg> <span class="username">vin01</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>A collection of tidbits which might do some good out there or at least be interesting for some of you.</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

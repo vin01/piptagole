@@ -1,4 +1,72 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.2">Jekyll</generator><link href="https://vin01.github.io/piptagole/feed.xml" rel="self" type="application/atom+xml" /><link href="https://vin01.github.io/piptagole/" rel="alternate" type="text/html" /><updated>2023-03-18T19:18:41+00:00</updated><id>https://vin01.github.io/piptagole/feed.xml</id><title type="html">Vin01’s Blog</title><subtitle>A collection of tidbits which might do some good out there or at least be interesting for some of you.</subtitle><entry><title type="html">Argument injection in Hagrid keyserver</title><link href="https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html" rel="alternate" type="text/html" title="Argument injection in Hagrid keyserver" /><published>2021-06-15T23:25:23+00:00</published><updated>2021-06-15T23:25:23+00:00</updated><id>https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection</id><content type="html" xml:base="https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html"><![CDATA[<h3 id="what-is-hagrid-">What is Hagrid ?</h3>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.2">Jekyll</generator><link href="https://vin01.github.io/piptagole/feed.xml" rel="self" type="application/atom+xml" /><link href="https://vin01.github.io/piptagole/" rel="alternate" type="text/html" /><updated>2023-03-18T20:36:55+00:00</updated><id>https://vin01.github.io/piptagole/feed.xml</id><title type="html">Vin01’s Blog</title><subtitle>A collection of tidbits which might do some good out there or at least be interesting for some of you.</subtitle><entry><title type="html">Self-hosted github actions using docker machine and gitlab runners</title><link href="https://vin01.github.io/piptagole/docker/security/autoscaling/gitlab/2023/03/13/openstack-docker-machine-host-access.html" rel="alternate" type="text/html" title="Self-hosted github actions using docker machine and gitlab runners" /><published>2023-03-13T23:25:23+00:00</published><updated>2023-03-13T23:25:23+00:00</updated><id>https://vin01.github.io/piptagole/docker/security/autoscaling/gitlab/2023/03/13/openstack-docker-machine-host-access</id><content type="html" xml:base="https://vin01.github.io/piptagole/docker/security/autoscaling/gitlab/2023/03/13/openstack-docker-machine-host-access.html"><![CDATA[<h2 id="what-is-docker-machine">What is docker machine?</h2>
+
+<p><a href="https://github.com/docker/machine/tree/master/drivers">Docker machine</a> was a cool project started in 2014 by Docker which allowed managing remote virtual machines on different providers like AWS, Rackspace and also using drivers like openstack to support managing virtual machines on self-hosted deployments. The primary feature was to automatically install docker on remote hosts and configure docker client to connect to them using docker api (it automagically managed tls certificates, authentication etc.).</p>
+
+<blockquote>
+  <p>It creates servers, installs Docker on them, then configures the Docker client to talk to them. (from project’s readme)</p>
+</blockquote>
+
+<h2 id="gitlab-supports-autoscaling-for-cicd-and-self-hosted-runners">Gitlab supports autoscaling for ci/cd and self-hosted runners</h2>
+
+<p>Docker <a href="https://github.com/docker/roadmap/issues/245">discontinued</a> maintaining it but Gitlab <a href="https://gitlab.com/gitlab-org/ci-cd/docker-machine">maintains a fork</a> which is currently the <a href="https://docs.gitlab.com/runner/configuration/autoscale.html">preferred mechanism</a> to provide autoscaling solution for self-hosted runners.</p>
+
+<p>Gitlab does intend to replace docker-machine eventually but it has not happened so far.</p>
+
+<p>A couple of open issues with more details:</p>
+
+<ul>
+  <li><a href="https://gitlab.com/groups/gitlab-org/-/epics/2502">Autoscaling Provider for GitLab Runner to replace Docker Machine</a></li>
+  <li><a href="https://gitlab.com/groups/gitlab-org/-/epics/6995">Docker Machine Replacement Project Plan</a></li>
+</ul>
+
+<h2 id="executing-code-on-the-virtual-machines-instead-of-docker-containers">Executing code on the virtual machines instead of docker containers</h2>
+
+<p>This approach alloww using <a href="https://docs.gitlab.com/runner/configuration/runner_autoscale_aws/"><code class="language-plaintext highlighter-rouge">docker</code> executor</a> on a cluster of auto-scaling vms which is not very helpful if you intend to test infrastructure which might include things like:</p>
+
+<ul>
+  <li>systemd</li>
+  <li>iptables</li>
+  <li>system level tracing</li>
+</ul>
+
+<p>It is possible to <a href="https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-socket-binding">mount docker socket</a> from the host to containers running the ci/cd jobs, although better alternatives like <a href="https://docs.gitlab.com/ee/ci/docker/using_kaniko.html">kaniko</a> might be better in general but that is not going to useful for our use case so we are going to need a mounted docker socket for docker executor ;)</p>
+
+<p>sample runner config to allow mounting docker socket:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  [runners.docker]
+    tls_verify = false
+    image = "docker:20.10.16"
+    privileged = false
+    disable_cache = false
+    volumes = ["/var/run/docker.sock:/var/run/docker.sock", "/cache"]
+</code></pre></div></div>
+
+<h2 id="docker-socket-access-in-container--root-on-the-host">Docker socket access in container == root on the host</h2>
+
+<p>Docker mostly runs as root on the host and granting a user access to docker group (which allows accessing docker socket) is equivalent to granting that user root access unless <a href="https://docs.docker.com/engine/security/userns-remap/">user namespacing</a> is in use or docker is running in <a href="https://docs.docker.com/engine/security/rootless/">rootless mode</a>.</p>
+
+<p>We can utilize this fact to escape out of the docker containers running on an autoscaling cluster and instead execute scripts on the hosts themselves.</p>
+
+<p>example ci config for gitlab:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>stages:
+  - test
+
+test:
+  stage: test
+  image: alpine:latest
+  script:
+    - apk add docker
+    - apk add openssh
+    - ssh-keygen -t ed25519 -N '' -f ed25519
+    - docker run --rm -v /:/host alpine sh -c "echo \"$(cat ed25519.pub)\" &gt;&gt; /host/home/ubuntu/.ssh/authorized_keys"
+    - host_ip=$(docker run --rm --net host alpine sh -c "ip route get 1| awk  '{print \$NF}'") &amp;&amp; echo $host_ip
+    - |
+      ssh -t -o StrictHostKeyChecking=no -i ./ed25519 ubuntu@$host_ip &lt;&lt;'END_TESTS'
+      echo "running tests .."
+      END_TESTS
+</code></pre></div></div>
+
+<p>This approach also makes sure that exit codes are passed on from the commands executed over ssh to container running the job.</p>]]></content><author><name></name></author><category term="docker" /><category term="security" /><category term="autoscaling" /><category term="gitlab" /><summary type="html"><![CDATA[What is docker machine?]]></summary></entry><entry><title type="html">Argument injection in Hagrid keyserver</title><link href="https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html" rel="alternate" type="text/html" title="Argument injection in Hagrid keyserver" /><published>2021-06-15T23:25:23+00:00</published><updated>2021-06-15T23:25:23+00:00</updated><id>https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection</id><content type="html" xml:base="https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html"><![CDATA[<h3 id="what-is-hagrid-">What is Hagrid ?</h3>
 
 <p>Hagrid as in, “keeper of keys” is a verifying OpenPGP keyserver, written in Rust, powered by <a href="https://sequoia-pgp.org/">Sequoia-PGP</a> running on .</p>
 
