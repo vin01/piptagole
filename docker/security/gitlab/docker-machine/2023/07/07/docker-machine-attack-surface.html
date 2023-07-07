@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Insecurity of Docker-machine as a virtual machine manager | Vin01’s Blog</title>
+<meta name="generator" content="Jekyll v4.3.2" />
+<meta property="og:title" content="Insecurity of Docker-machine as a virtual machine manager" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="What is docker machine?" />
+<meta property="og:description" content="What is docker machine?" />
+<link rel="canonical" href="http://0.0.0.0:4000/piptagole/docker/security/gitlab/docker-machine/2023/07/07/docker-machine-attack-surface.html" />
+<meta property="og:url" content="http://0.0.0.0:4000/piptagole/docker/security/gitlab/docker-machine/2023/07/07/docker-machine-attack-surface.html" />
+<meta property="og:site_name" content="Vin01’s Blog" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2023-07-07T11:15:23-05:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Insecurity of Docker-machine as a virtual machine manager" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2023-07-07T11:15:23-05:00","datePublished":"2023-07-07T11:15:23-05:00","description":"What is docker machine?","headline":"Insecurity of Docker-machine as a virtual machine manager","mainEntityOfPage":{"@type":"WebPage","@id":"http://0.0.0.0:4000/piptagole/docker/security/gitlab/docker-machine/2023/07/07/docker-machine-attack-surface.html"},"url":"http://0.0.0.0:4000/piptagole/docker/security/gitlab/docker-machine/2023/07/07/docker-machine-attack-surface.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/piptagole/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://0.0.0.0:4000/piptagole/feed.xml" title="Vin01&apos;s Blog" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/piptagole/">Vin01&#39;s Blog</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/piptagole/about/">About</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Insecurity of Docker-machine as a virtual machine manager</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2023-07-07T11:15:23-05:00" itemprop="datePublished">Jul 7, 2023
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <h2 id="what-is-docker-machine">What is docker machine?</h2>
+
+<p><a href="https://github.com/docker/machine/tree/master/drivers">Docker machine</a> was a cool project started in 2014 by Docker which allowed managing remote virtual machines on different providers like AWS, Rackspace and also using drivers like openstack to support managing virtual machines on self-hosted deployments. The primary feature was to automatically install docker on remote hosts and configure docker client to connect to them using docker api (it automagically managed tls certificates, authentication etc.).</p>
+
+<blockquote>
+  <p>It creates servers, installs Docker on them, then configures the Docker client to talk to them. (from project’s readme)</p>
+</blockquote>
+
+<p>You can read more on this in <a href="https://vin01.github.io/piptagole/docker/security/autoscaling/gitlab/2023/03/13/openstack-docker-machine-host-access.html">another post</a> I wrote about autoscaling and docker-machine.</p>
+
+<h2 id="so-what-is-wrong-with-docker-machine">So what is wrong with docker-machine?</h2>
+
+<p>It has been deprecated and is sort-of maintained by Gitlab alone to support existing autoscaling workloads.</p>
+
+<p>A concrete weakness that I found out is reliance of docker-machine on worker nodes (virtual machines it manages) to provide it with information like docker version running on that virtual machine.</p>
+
+<p>e.g.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ docker-machine ls
+NAME                       ACTIVE   DRIVER      STATE     URL                     SWARM   DOCKER    ERRORS
+worker-node-id             -        virtualbox  Running   tcp://10.1.0.128:2376           v24.0.2
+
+</code></pre></div></div>
+
+<h2 id="meet-escape-sequences">Meet escape sequences</h2>
+
+<p><a href="https://tldp.org/HOWTO/Bash-Prompt-HOWTO/c327.html">Escape sequences</a> are special sequences of characters which are used for things like cursor styling, font colors etc. in terminals.</p>
+
+<p>It is possible to inject such sequences in the docker version information by the worker nodes. docker-machine happily renders these into the terminal.</p>
+
+<p>Here is an example of malicious docker daemon which would respond with a benign escape sequence to the query of docker-machine: <a href="https://github.com/vin01/bad-moby/commit/063c6f83b668501cba9b066e366a55cd51f1d4df">vin01/bad-moby</a></p>
+
+<p>There is no better reference to analysis of such attacks than <a href="https://marc.info/?l=bugtraq&amp;m=104612710031920&amp;w=2">the one by HD Moore</a>. Quite a few attack vectors are still valid today and easy to exploit. I intend to write more on this in a different post.</p>
+
+<h2 id="attack-vectors">Attack vectors</h2>
+
+<h3 id="utilization-of-docker-machine-for-isolation-of-cicd-jobs-in-gitlab-or-any-other-provider">Utilization of docker-machine for isolation of CI/CD jobs in Gitlab or any other provider.</h3>
+
+<p>Since docker-machine is still the <a href="https://docs.gitlab.com/runner/configuration/runner_autoscale_aws/">tool of choice</a> for achieving autoscaling using Gitlab, relying on it to run CI/CD jobs in isolated worker virtual machines is a natural approach. With untrustworthy output, a malicious worker node can tricky the administrator or automation tool into doing something they would otherwise not do.</p>
+
+<p><img src="/piptagole/assets/docker-machine.png" alt="PoC escape sequence injection" /></p>
+
+<h3 id="denial-of-service">Denial of service</h3>
+
+<p>It is possible to inject not just escape sequences but any arbitrary data which could also include an infinite stream of bytes. Result: a crashed docker-machine bastion node + worker nodes.</p>
+
+<p>Note: Gitlab is aware of it but the use-case of isolation (as one would expect from a virtual machine management tool) is not really the core feature of docker-machine by design and also they intend to move away from it, so for now, there is no plan to patch it.</p>
+
+  </div><a class="u-url" href="/piptagole/docker/security/gitlab/docker-machine/2023/07/07/docker-machine-attack-surface.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/piptagole/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Vin01&#39;s Blog</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Vin01&#39;s Blog</li><li><a class="u-email" href="mailto:vinci+ghp [at] protonmail.ch">vinci+ghp [at] protonmail.ch</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/vin01"><svg class="svg-icon"><use xlink:href="/piptagole/assets/minima-social-icons.svg#github"></use></svg> <span class="username">vin01</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>A collection of tidbits which might do some good out there or at least be interesting for some of you.</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

@@ -1,4 +1,50 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.2">Jekyll</generator><link href="https://vin01.github.io/piptagole/feed.xml" rel="self" type="application/atom+xml" /><link href="https://vin01.github.io/piptagole/" rel="alternate" type="text/html" /><updated>2023-03-18T20:36:55+00:00</updated><id>https://vin01.github.io/piptagole/feed.xml</id><title type="html">Vin01’s Blog</title><subtitle>A collection of tidbits which might do some good out there or at least be interesting for some of you.</subtitle><entry><title type="html">Self-hosted github actions using docker machine and gitlab runners</title><link href="https://vin01.github.io/piptagole/docker/security/autoscaling/gitlab/2023/03/13/openstack-docker-machine-host-access.html" rel="alternate" type="text/html" title="Self-hosted github actions using docker machine and gitlab runners" /><published>2023-03-13T23:25:23+00:00</published><updated>2023-03-13T23:25:23+00:00</updated><id>https://vin01.github.io/piptagole/docker/security/autoscaling/gitlab/2023/03/13/openstack-docker-machine-host-access</id><content type="html" xml:base="https://vin01.github.io/piptagole/docker/security/autoscaling/gitlab/2023/03/13/openstack-docker-machine-host-access.html"><![CDATA[<h2 id="what-is-docker-machine">What is docker machine?</h2>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.2">Jekyll</generator><link href="https://vin01.github.io/piptagole/feed.xml" rel="self" type="application/atom+xml" /><link href="https://vin01.github.io/piptagole/" rel="alternate" type="text/html" /><updated>2023-07-07T17:26:01-05:00</updated><id>https://vin01.github.io/piptagole/feed.xml</id><title type="html">Vin01’s Blog</title><subtitle>A collection of tidbits which might do some good out there or at least be interesting for some of you.</subtitle><entry><title type="html">Insecurity of Docker-machine as a virtual machine manager</title><link href="https://vin01.github.io/piptagole/docker/security/gitlab/docker-machine/2023/07/07/docker-machine-attack-surface.html" rel="alternate" type="text/html" title="Insecurity of Docker-machine as a virtual machine manager" /><published>2023-07-07T11:15:23-05:00</published><updated>2023-07-07T11:15:23-05:00</updated><id>https://vin01.github.io/piptagole/docker/security/gitlab/docker-machine/2023/07/07/docker-machine-attack-surface</id><content type="html" xml:base="https://vin01.github.io/piptagole/docker/security/gitlab/docker-machine/2023/07/07/docker-machine-attack-surface.html"><![CDATA[<h2 id="what-is-docker-machine">What is docker machine?</h2>
+
+<p><a href="https://github.com/docker/machine/tree/master/drivers">Docker machine</a> was a cool project started in 2014 by Docker which allowed managing remote virtual machines on different providers like AWS, Rackspace and also using drivers like openstack to support managing virtual machines on self-hosted deployments. The primary feature was to automatically install docker on remote hosts and configure docker client to connect to them using docker api (it automagically managed tls certificates, authentication etc.).</p>
+
+<blockquote>
+  <p>It creates servers, installs Docker on them, then configures the Docker client to talk to them. (from project’s readme)</p>
+</blockquote>
+
+<p>You can read more on this in <a href="https://vin01.github.io/piptagole/docker/security/autoscaling/gitlab/2023/03/13/openstack-docker-machine-host-access.html">another post</a> I wrote about autoscaling and docker-machine.</p>
+
+<h2 id="so-what-is-wrong-with-docker-machine">So what is wrong with docker-machine?</h2>
+
+<p>It has been deprecated and is sort-of maintained by Gitlab alone to support existing autoscaling workloads.</p>
+
+<p>A concrete weakness that I found out is reliance of docker-machine on worker nodes (virtual machines it manages) to provide it with information like docker version running on that virtual machine.</p>
+
+<p>e.g.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ docker-machine ls
+NAME                       ACTIVE   DRIVER      STATE     URL                     SWARM   DOCKER    ERRORS
+worker-node-id             -        virtualbox  Running   tcp://10.1.0.128:2376           v24.0.2
+
+</code></pre></div></div>
+
+<h2 id="meet-escape-sequences">Meet escape sequences</h2>
+
+<p><a href="https://tldp.org/HOWTO/Bash-Prompt-HOWTO/c327.html">Escape sequences</a> are special sequences of characters which are used for things like cursor styling, font colors etc. in terminals.</p>
+
+<p>It is possible to inject such sequences in the docker version information by the worker nodes. docker-machine happily renders these into the terminal.</p>
+
+<p>Here is an example of malicious docker daemon which would respond with a benign escape sequence to the query of docker-machine: <a href="https://github.com/vin01/bad-moby/commit/063c6f83b668501cba9b066e366a55cd51f1d4df">vin01/bad-moby</a></p>
+
+<p>There is no better reference to analysis of such attacks than <a href="https://marc.info/?l=bugtraq&amp;m=104612710031920&amp;w=2">the one by HD Moore</a>. Quite a few attack vectors are still valid today and easy to exploit. I intend to write more on this in a different post.</p>
+
+<h2 id="attack-vectors">Attack vectors</h2>
+
+<h3 id="utilization-of-docker-machine-for-isolation-of-cicd-jobs-in-gitlab-or-any-other-provider">Utilization of docker-machine for isolation of CI/CD jobs in Gitlab or any other provider.</h3>
+
+<p>Since docker-machine is still the <a href="https://docs.gitlab.com/runner/configuration/runner_autoscale_aws/">tool of choice</a> for achieving autoscaling using Gitlab, relying on it to run CI/CD jobs in isolated worker virtual machines is a natural approach. With untrustworthy output, a malicious worker node can tricky the administrator or automation tool into doing something they would otherwise not do.</p>
+
+<p><img src="/piptagole/assets/docker-machine.png" alt="PoC escape sequence injection" /></p>
+
+<h3 id="denial-of-service">Denial of service</h3>
+
+<p>It is possible to inject not just escape sequences but any arbitrary data which could also include an infinite stream of bytes. Result: a crashed docker-machine bastion node + worker nodes.</p>
+
+<p>Note: Gitlab is aware of it but the use-case of isolation (as one would expect from a virtual machine management tool) is not really the core feature of docker-machine by design and also they intend to move away from it, so for now, there is no plan to patch it.</p>]]></content><author><name></name></author><category term="docker" /><category term="security" /><category term="gitlab" /><category term="docker-machine" /><summary type="html"><![CDATA[What is docker machine?]]></summary></entry><entry><title type="html">Self-hosted github actions using docker machine and gitlab runners</title><link href="https://vin01.github.io/piptagole/docker/security/autoscaling/gitlab/2023/03/13/openstack-docker-machine-host-access.html" rel="alternate" type="text/html" title="Self-hosted github actions using docker machine and gitlab runners" /><published>2023-03-13T18:25:23-05:00</published><updated>2023-03-13T18:25:23-05:00</updated><id>https://vin01.github.io/piptagole/docker/security/autoscaling/gitlab/2023/03/13/openstack-docker-machine-host-access</id><content type="html" xml:base="https://vin01.github.io/piptagole/docker/security/autoscaling/gitlab/2023/03/13/openstack-docker-machine-host-access.html"><![CDATA[<h2 id="what-is-docker-machine">What is docker machine?</h2>
 
 <p><a href="https://github.com/docker/machine/tree/master/drivers">Docker machine</a> was a cool project started in 2014 by Docker which allowed managing remote virtual machines on different providers like AWS, Rackspace and also using drivers like openstack to support managing virtual machines on self-hosted deployments. The primary feature was to automatically install docker on remote hosts and configure docker client to connect to them using docker api (it automagically managed tls certificates, authentication etc.).</p>
 
@@ -66,7 +112,7 @@ test:
       END_TESTS
 </code></pre></div></div>
 
-<p>This approach also makes sure that exit codes are passed on from the commands executed over ssh to container running the job.</p>]]></content><author><name></name></author><category term="docker" /><category term="security" /><category term="autoscaling" /><category term="gitlab" /><summary type="html"><![CDATA[What is docker machine?]]></summary></entry><entry><title type="html">Argument injection in Hagrid keyserver</title><link href="https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html" rel="alternate" type="text/html" title="Argument injection in Hagrid keyserver" /><published>2021-06-15T23:25:23+00:00</published><updated>2021-06-15T23:25:23+00:00</updated><id>https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection</id><content type="html" xml:base="https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html"><![CDATA[<h3 id="what-is-hagrid-">What is Hagrid ?</h3>
+<p>This approach also makes sure that exit codes are passed on from the commands executed over ssh to container running the job.</p>]]></content><author><name></name></author><category term="docker" /><category term="security" /><category term="autoscaling" /><category term="gitlab" /><summary type="html"><![CDATA[What is docker machine?]]></summary></entry><entry><title type="html">Argument injection in Hagrid keyserver</title><link href="https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html" rel="alternate" type="text/html" title="Argument injection in Hagrid keyserver" /><published>2021-06-15T18:25:23-05:00</published><updated>2021-06-15T18:25:23-05:00</updated><id>https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection</id><content type="html" xml:base="https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html"><![CDATA[<h3 id="what-is-hagrid-">What is Hagrid ?</h3>
 
 <p>Hagrid as in, “keeper of keys” is a verifying OpenPGP keyserver, written in Rust, powered by <a href="https://sequoia-pgp.org/">Sequoia-PGP</a> running on .</p>
 
@@ -114,7 +160,7 @@ test:
 
 <p><a href="https://github.com/lettre/lettre/security/advisories/GHSA-vc2p-r46x-m3vx">Advisory</a> from lettre within a week.</p>
 
-<p>It was assigned <a href="https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-28247">CVE-2020-28247</a>.</p>]]></content><author><name></name></author><category term="pgp" /><category term="security" /><category term="hagrid" /><summary type="html"><![CDATA[What is Hagrid ?]]></summary></entry><entry><title type="html">Unauthenticated Gitlab SSRF</title><link href="https://vin01.github.io/piptagole/gitlab/ssrf/security/bugbounty/2021/06/15/gitlab-ssrf.html" rel="alternate" type="text/html" title="Unauthenticated Gitlab SSRF" /><published>2021-06-15T20:25:23+00:00</published><updated>2021-06-15T20:25:23+00:00</updated><id>https://vin01.github.io/piptagole/gitlab/ssrf/security/bugbounty/2021/06/15/gitlab-ssrf</id><content type="html" xml:base="https://vin01.github.io/piptagole/gitlab/ssrf/security/bugbounty/2021/06/15/gitlab-ssrf.html"><![CDATA[<h3 id="meet-gitlab-ci-lint-api">Meet Gitlab <a href="https://docs.gitlab.com/ee/api/lint.html">CI Lint API</a></h3>
+<p>It was assigned <a href="https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-28247">CVE-2020-28247</a>.</p>]]></content><author><name></name></author><category term="pgp" /><category term="security" /><category term="hagrid" /><summary type="html"><![CDATA[What is Hagrid ?]]></summary></entry><entry><title type="html">Unauthenticated Gitlab SSRF</title><link href="https://vin01.github.io/piptagole/gitlab/ssrf/security/bugbounty/2021/06/15/gitlab-ssrf.html" rel="alternate" type="text/html" title="Unauthenticated Gitlab SSRF" /><published>2021-06-15T15:25:23-05:00</published><updated>2021-06-15T15:25:23-05:00</updated><id>https://vin01.github.io/piptagole/gitlab/ssrf/security/bugbounty/2021/06/15/gitlab-ssrf</id><content type="html" xml:base="https://vin01.github.io/piptagole/gitlab/ssrf/security/bugbounty/2021/06/15/gitlab-ssrf.html"><![CDATA[<h3 id="meet-gitlab-ci-lint-api">Meet Gitlab <a href="https://docs.gitlab.com/ee/api/lint.html">CI Lint API</a></h3>
 
 <p>Purpose of the CI Lint API is to validate CI/CD YAML configuration for Gitlab.</p>
 
