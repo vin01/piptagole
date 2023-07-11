@@ -85,7 +85,7 @@ worker-node-id             -        virtualbox  Running   tcp://10.1.0.128:2376 
 
 <h3 id="utilization-of-docker-machine-for-isolation-of-cicd-jobs-in-gitlab-or-any-other-provider">Utilization of docker-machine for isolation of CI/CD jobs in Gitlab or any other provider.</h3>
 
-<p>Since docker-machine is still the <a href="https://docs.gitlab.com/runner/configuration/runner_autoscale_aws/">tool of choice</a> for achieving autoscaling using Gitlab, relying on it to run CI/CD jobs in isolated worker virtual machines is a natural approach. With untrustworthy output, a malicious worker node can tricky the administrator or automation tool into doing something they would otherwise not do.</p>
+<p>Since docker-machine is still the <a href="https://docs.gitlab.com/runner/configuration/runner_autoscale_aws/">tool of choice</a> for achieving autoscaling using Gitlab, relying on it to run CI/CD jobs in isolated worker virtual machines is a natural approach. With untrustworthy output, a malicious worker node can trick the administrator or automation tool into doing something they would otherwise not do.</p>
 
 <p><img src="/piptagole/assets/docker-machine.png" alt="PoC escape sequence injection" /></p>
 
