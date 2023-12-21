@@ -2,7 +2,7 @@
 
 <p>SSH’s <code class="language-plaintext highlighter-rouge">ProxyCommand</code> is a feature quite widely used to proxy ssh connections by allowing to specify custom commands to be used to connect to the server. Arguments to this directive may contain tokens like <code class="language-plaintext highlighter-rouge">%h</code>, <code class="language-plaintext highlighter-rouge">%u</code> which refer to hostname and username respectively.</p>
 
-<p>When coming fro untrusted sources, a hostname can be malicious and something like <strong>`malicious-command`</strong> (backticks would allow a command to be executed in shell)</p>
+<p>When coming from untrusted sources, a hostname can be malicious and look something like <strong>`malicious-command`</strong> (backticks would allow a command to be executed in shell)</p>
 
 <p><a href="https://man.openbsd.org/ssh_config#ProxyCommand">More info in docs which describe this feature in detail</a></p>
 
@@ -23,7 +23,7 @@
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git clone https://github.com/vin01/poc-proxycommand-vulnerable --recurse-submodules
 </code></pre></div></div>
 
-<p>Even if the ProxyCommand being uses single quotes to sanitize arguments i.e. '%h', it is not sufficient since an attacker controlled hostname might itself contain a single quote and defeat quoting.</p>
+<p>Even if the ProxyCommand is being used with single quotes to sanitize arguments i.e. '%h', it is not sufficient since an attacker controlled hostname might itself contain a single quote and defeat quoting.</p>
 
 <p>PoC 2:</p>
 
