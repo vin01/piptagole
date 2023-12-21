@@ -1,4 +1,64 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.2">Jekyll</generator><link href="https://vin01.github.io/piptagole/feed.xml" rel="self" type="application/atom+xml" /><link href="https://vin01.github.io/piptagole/" rel="alternate" type="text/html" /><updated>2023-07-07T17:26:01-05:00</updated><id>https://vin01.github.io/piptagole/feed.xml</id><title type="html">Vin01’s Blog</title><subtitle>A collection of tidbits which might do some good out there or at least be interesting for some of you.</subtitle><entry><title type="html">Insecurity of Docker-machine as a virtual machine manager</title><link href="https://vin01.github.io/piptagole/docker/security/gitlab/docker-machine/2023/07/07/docker-machine-attack-surface.html" rel="alternate" type="text/html" title="Insecurity of Docker-machine as a virtual machine manager" /><published>2023-07-07T11:15:23-05:00</published><updated>2023-07-07T11:15:23-05:00</updated><id>https://vin01.github.io/piptagole/docker/security/gitlab/docker-machine/2023/07/07/docker-machine-attack-surface</id><content type="html" xml:base="https://vin01.github.io/piptagole/docker/security/gitlab/docker-machine/2023/07/07/docker-machine-attack-surface.html"><![CDATA[<h2 id="what-is-docker-machine">What is docker machine?</h2>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.2">Jekyll</generator><link href="https://vin01.github.io/piptagole/feed.xml" rel="self" type="application/atom+xml" /><link href="https://vin01.github.io/piptagole/" rel="alternate" type="text/html" /><updated>2023-12-21T20:18:38+00:00</updated><id>https://vin01.github.io/piptagole/feed.xml</id><title type="html">Vin01’s Blog</title><subtitle>A collection of tidbits which might do some good out there or at least be interesting for some of you.</subtitle><entry><title type="html">SSH ProxyCommand == RCE</title><link href="https://vin01.github.io/piptagole/ssh/security/openssh/libssh/remote-code-execution/2023/12/20/openssh-proxycommand-libssh-rce.html" rel="alternate" type="text/html" title="SSH ProxyCommand == RCE" /><published>2023-12-20T20:25:23+00:00</published><updated>2023-12-20T20:25:23+00:00</updated><id>https://vin01.github.io/piptagole/ssh/security/openssh/libssh/remote-code-execution/2023/12/20/openssh-proxycommand-libssh-rce</id><content type="html" xml:base="https://vin01.github.io/piptagole/ssh/security/openssh/libssh/remote-code-execution/2023/12/20/openssh-proxycommand-libssh-rce.html"><![CDATA[<h2 id="summary">Summary</h2>
+
+<p>SSH’s <code class="language-plaintext highlighter-rouge">ProxyCommand</code> is a feature quite widely used to proxy ssh connections by allowing to specify custom commands to be used to connect to the server. Arguments to this directive may contain tokens like <code class="language-plaintext highlighter-rouge">%h</code>, <code class="language-plaintext highlighter-rouge">%u</code> which refer to hostname and username respectively.</p>
+
+<p>When coming fro untrusted sources, a hostname can be malicious and something like <strong>`malicious-command`</strong> (backticks would allow a command to be executed in shell)</p>
+
+<p><a href="https://man.openbsd.org/ssh_config#ProxyCommand">More info in docs which describe this feature in detail</a></p>
+
+<h2 id="lets-review-an-example">Let’s review an example</h2>
+
+<p>Taking an example based on the <a href="https://man.openbsd.org/ssh_config#ProxyCommand">docs</a></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Host *.example.com
+  ProxyCommand /usr/bin/nc -X connect -x 192.0.2.0:8080 %h %p
+</code></pre></div></div>
+
+<p>In this case, there is no sanitization of hostname and if <code class="language-plaintext highlighter-rouge">%h</code> contains a malicious hostname, it may allow command execution.</p>
+
+<h2 id="can-i-haz-poc">Can I haz PoC?</h2>
+
+<p>What good is all this without a PoC? So here we go! Once you have added the above example to your <code class="language-plaintext highlighter-rouge">.ssh/config</code>, try following which should pop a calculator on OS X.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git clone https://github.com/vin01/poc-proxycommand-vulnerable --recurse-submodules
+</code></pre></div></div>
+
+<p>Even if the ProxyCommand being uses single quotes to sanitize arguments i.e. '%h', it is not sufficient since an attacker controlled hostname might itself contain a single quote and defeat quoting.</p>
+
+<p>PoC 2:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git clone https://github.com/vin01/poc-proxycommand-vulnerable-v2 --recurse-submodules
+</code></pre></div></div>
+
+<h2 id="remediation">Remediation</h2>
+
+<p>Update to:</p>
+
+<ul>
+  <li><a href="https://www.openssh.com/txt/release-9.6">OpenSSH 9.6p1</a></li>
+  <li><a href="https://www.libssh.org/security/advisories/CVE-2023-6004.txt">libssh 0.10.6 and 0.9.8</a></li>
+</ul>
+
+<h2 id="vulnerable-usage-out-in-the-wild">Vulnerable usage out in the wild</h2>
+
+<ul>
+  <li><a href="https://help.okta.com/asa/en-us/content/topics/adv_server_access/docs/custom-ssh-client.htm">https://help.okta.com/asa/en-us/content/topics/adv_server_access/docs/custom-ssh-client.htm</a></li>
+  <li><a href="https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/use-cases/ssh/">https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/use-cases/ssh/</a></li>
+  <li><a href="https://cloud.google.com/iap/docs/tcp-by-host">https://cloud.google.com/iap/docs/tcp-by-host</a></li>
+  <li><a href="https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-getting-started-enable-ssh-connections.html">https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-getting-started-enable-ssh-connections.html</a></li>
+  <li><a href="https://goteleport.com/docs/connect-your-client/tsh/">https://goteleport.com/docs/connect-your-client/tsh/</a></li>
+</ul>
+
+<h2 id="my-sincere-thanks-to">My sincere thanks to:</h2>
+
+<ul>
+  <li>Kevin Roh @ Okta for brilliant triaging and impact assessment</li>
+  <li>Jakub Jelen @ libssh for timely follow up and communication</li>
+  <li>Damien Miller and others @ Openssh for patches and discussions</li>
+  <li>Maintainers @ Git for discussions to define a potential trust boundary between ssh and git</li>
+</ul>
+
+<p><strong><a href="https://www.openbsd.org/donations.html">How to donate to OpenSSH/OpenBSD</a></strong></p>]]></content><author><name></name></author><category term="ssh" /><category term="security" /><category term="openssh" /><category term="libssh" /><category term="remote-code-execution" /><summary type="html"><![CDATA[Summary]]></summary></entry><entry><title type="html">Insecurity of Docker-machine as a virtual machine manager</title><link href="https://vin01.github.io/piptagole/docker/security/gitlab/docker-machine/2023/07/07/docker-machine-attack-surface.html" rel="alternate" type="text/html" title="Insecurity of Docker-machine as a virtual machine manager" /><published>2023-07-07T16:15:23+00:00</published><updated>2023-07-07T16:15:23+00:00</updated><id>https://vin01.github.io/piptagole/docker/security/gitlab/docker-machine/2023/07/07/docker-machine-attack-surface</id><content type="html" xml:base="https://vin01.github.io/piptagole/docker/security/gitlab/docker-machine/2023/07/07/docker-machine-attack-surface.html"><![CDATA[<h2 id="what-is-docker-machine">What is docker machine?</h2>
 
 <p><a href="https://github.com/docker/machine/tree/master/drivers">Docker machine</a> was a cool project started in 2014 by Docker which allowed managing remote virtual machines on different providers like AWS, Rackspace and also using drivers like openstack to support managing virtual machines on self-hosted deployments. The primary feature was to automatically install docker on remote hosts and configure docker client to connect to them using docker api (it automagically managed tls certificates, authentication etc.).</p>
 
@@ -44,7 +104,7 @@ worker-node-id             -        virtualbox  Running   tcp://10.1.0.128:2376 
 
 <p>It is possible to inject not just escape sequences but any arbitrary data which could also include an infinite stream of bytes. Result: a crashed docker-machine bastion node + worker nodes.</p>
 
-<p>Note: Gitlab is aware of it but the use-case of isolation (as one would expect from a virtual machine management tool) is not really the core feature of docker-machine by design and also they intend to move away from it, so for now, there is no plan to patch it.</p>]]></content><author><name></name></author><category term="docker" /><category term="security" /><category term="gitlab" /><category term="docker-machine" /><summary type="html"><![CDATA[What is docker machine?]]></summary></entry><entry><title type="html">Self-hosted github actions using docker machine and gitlab runners</title><link href="https://vin01.github.io/piptagole/docker/security/autoscaling/gitlab/2023/03/13/openstack-docker-machine-host-access.html" rel="alternate" type="text/html" title="Self-hosted github actions using docker machine and gitlab runners" /><published>2023-03-13T18:25:23-05:00</published><updated>2023-03-13T18:25:23-05:00</updated><id>https://vin01.github.io/piptagole/docker/security/autoscaling/gitlab/2023/03/13/openstack-docker-machine-host-access</id><content type="html" xml:base="https://vin01.github.io/piptagole/docker/security/autoscaling/gitlab/2023/03/13/openstack-docker-machine-host-access.html"><![CDATA[<h2 id="what-is-docker-machine">What is docker machine?</h2>
+<p>Note: Gitlab is aware of it but the use-case of isolation (as one would expect from a virtual machine management tool) is not really the core feature of docker-machine by design and also they intend to move away from it, so for now, there is no plan to patch it.</p>]]></content><author><name></name></author><category term="docker" /><category term="security" /><category term="gitlab" /><category term="docker-machine" /><summary type="html"><![CDATA[What is docker machine?]]></summary></entry><entry><title type="html">Self-hosted github actions using docker machine and gitlab runners</title><link href="https://vin01.github.io/piptagole/docker/security/autoscaling/gitlab/2023/03/13/openstack-docker-machine-host-access.html" rel="alternate" type="text/html" title="Self-hosted github actions using docker machine and gitlab runners" /><published>2023-03-13T23:25:23+00:00</published><updated>2023-03-13T23:25:23+00:00</updated><id>https://vin01.github.io/piptagole/docker/security/autoscaling/gitlab/2023/03/13/openstack-docker-machine-host-access</id><content type="html" xml:base="https://vin01.github.io/piptagole/docker/security/autoscaling/gitlab/2023/03/13/openstack-docker-machine-host-access.html"><![CDATA[<h2 id="what-is-docker-machine">What is docker machine?</h2>
 
 <p><a href="https://github.com/docker/machine/tree/master/drivers">Docker machine</a> was a cool project started in 2014 by Docker which allowed managing remote virtual machines on different providers like AWS, Rackspace and also using drivers like openstack to support managing virtual machines on self-hosted deployments. The primary feature was to automatically install docker on remote hosts and configure docker client to connect to them using docker api (it automagically managed tls certificates, authentication etc.).</p>
 
@@ -112,7 +172,7 @@ test:
       END_TESTS
 </code></pre></div></div>
 
-<p>This approach also makes sure that exit codes are passed on from the commands executed over ssh to container running the job.</p>]]></content><author><name></name></author><category term="docker" /><category term="security" /><category term="autoscaling" /><category term="gitlab" /><summary type="html"><![CDATA[What is docker machine?]]></summary></entry><entry><title type="html">Argument injection in Hagrid keyserver</title><link href="https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html" rel="alternate" type="text/html" title="Argument injection in Hagrid keyserver" /><published>2021-06-15T18:25:23-05:00</published><updated>2021-06-15T18:25:23-05:00</updated><id>https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection</id><content type="html" xml:base="https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html"><![CDATA[<h3 id="what-is-hagrid-">What is Hagrid ?</h3>
+<p>This approach also makes sure that exit codes are passed on from the commands executed over ssh to container running the job.</p>]]></content><author><name></name></author><category term="docker" /><category term="security" /><category term="autoscaling" /><category term="gitlab" /><summary type="html"><![CDATA[What is docker machine?]]></summary></entry><entry><title type="html">Argument injection in Hagrid keyserver</title><link href="https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html" rel="alternate" type="text/html" title="Argument injection in Hagrid keyserver" /><published>2021-06-15T23:25:23+00:00</published><updated>2021-06-15T23:25:23+00:00</updated><id>https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection</id><content type="html" xml:base="https://vin01.github.io/piptagole/pgp/security/hagrid/2021/06/15/hagrid-argument-injection.html"><![CDATA[<h3 id="what-is-hagrid-">What is Hagrid ?</h3>
 
 <p>Hagrid as in, “keeper of keys” is a verifying OpenPGP keyserver, written in Rust, powered by <a href="https://sequoia-pgp.org/">Sequoia-PGP</a> running on .</p>
 
@@ -160,7 +220,7 @@ test:
 
 <p><a href="https://github.com/lettre/lettre/security/advisories/GHSA-vc2p-r46x-m3vx">Advisory</a> from lettre within a week.</p>
 
-<p>It was assigned <a href="https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-28247">CVE-2020-28247</a>.</p>]]></content><author><name></name></author><category term="pgp" /><category term="security" /><category term="hagrid" /><summary type="html"><![CDATA[What is Hagrid ?]]></summary></entry><entry><title type="html">Unauthenticated Gitlab SSRF</title><link href="https://vin01.github.io/piptagole/gitlab/ssrf/security/bugbounty/2021/06/15/gitlab-ssrf.html" rel="alternate" type="text/html" title="Unauthenticated Gitlab SSRF" /><published>2021-06-15T15:25:23-05:00</published><updated>2021-06-15T15:25:23-05:00</updated><id>https://vin01.github.io/piptagole/gitlab/ssrf/security/bugbounty/2021/06/15/gitlab-ssrf</id><content type="html" xml:base="https://vin01.github.io/piptagole/gitlab/ssrf/security/bugbounty/2021/06/15/gitlab-ssrf.html"><![CDATA[<h3 id="meet-gitlab-ci-lint-api">Meet Gitlab <a href="https://docs.gitlab.com/ee/api/lint.html">CI Lint API</a></h3>
+<p>It was assigned <a href="https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-28247">CVE-2020-28247</a>.</p>]]></content><author><name></name></author><category term="pgp" /><category term="security" /><category term="hagrid" /><summary type="html"><![CDATA[What is Hagrid ?]]></summary></entry><entry><title type="html">Unauthenticated Gitlab SSRF</title><link href="https://vin01.github.io/piptagole/gitlab/ssrf/security/bugbounty/2021/06/15/gitlab-ssrf.html" rel="alternate" type="text/html" title="Unauthenticated Gitlab SSRF" /><published>2021-06-15T20:25:23+00:00</published><updated>2021-06-15T20:25:23+00:00</updated><id>https://vin01.github.io/piptagole/gitlab/ssrf/security/bugbounty/2021/06/15/gitlab-ssrf</id><content type="html" xml:base="https://vin01.github.io/piptagole/gitlab/ssrf/security/bugbounty/2021/06/15/gitlab-ssrf.html"><![CDATA[<h3 id="meet-gitlab-ci-lint-api">Meet Gitlab <a href="https://docs.gitlab.com/ee/api/lint.html">CI Lint API</a></h3>
 
 <p>Purpose of the CI Lint API is to validate CI/CD YAML configuration for Gitlab.</p>
 
