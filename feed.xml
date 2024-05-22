@@ -119,7 +119,7 @@
 
 <p>What better tool to inject arbitrary text containing escape sequences (and hence hyperlinks) into our terminal emulators than Docker?</p>
 
-<p>I created a simple docker image using only one instruction in the Dockerfile i.e. <code class="language-plaintext highlighter-rouge">FROM alpine:laest</code>, exported it to tar, modified the json metadata to contain following <code class="language-plaintext highlighter-rouge">architecture</code> value to create a new image:</p>
+<p>I created a simple docker image using only one instruction in the Dockerfile i.e. <code class="language-plaintext highlighter-rouge">FROM alpine:latest</code>, exported it to tar, modified the json metadata to contain following <code class="language-plaintext highlighter-rouge">architecture</code> value to create a new image:</p>
 
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{"architecture":") not found ..\n\n\u001B]8;;https://example.com\u0007Please click this link to install latest docker client.\u001B]8;;\u0007\n\n", ...
 </code></pre></div></div>
