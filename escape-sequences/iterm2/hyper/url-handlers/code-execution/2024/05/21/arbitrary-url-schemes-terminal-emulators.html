@@ -72,7 +72,7 @@
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>echo -e '\033]8;;http://example.com\033\\This is a link\033]8;;\033\\\n'
 </code></pre></div></div>
 
-<p>It is just like HTMl <code class="language-plaintext highlighter-rouge">&lt;a&gt;</code> element, right in our terminals.</p>
+<p>It is just like HTML <code class="language-plaintext highlighter-rouge">&lt;a&gt;</code> element, right in our terminals.</p>
 
 <h2 id="arbitrary-url-schemes">Arbitrary url schemes</h2>
 
@@ -131,7 +131,7 @@
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ssh: Could not resolve hostname cd /`launch-calc`; exec $shell -l: nodename nor servname provided, or not known^M
 </code></pre></div></div>
 
-<p>And once sourced, it would execute the <code class="language-plaintext highlighter-rouge">lunch-calc</code> command allowing a somewhat delayed limited code execution. Injecting a more elaborate payload might also be possible, not just a single command. Also abusing SSH flags like <code class="language-plaintext highlighter-rouge">-F</code> to provide a config file, an attacker could also abuse an already existing local file on the target’s device to achieve the same.</p>
+<p>And once sourced, it would execute the <code class="language-plaintext highlighter-rouge">launch-calc</code> command allowing a somewhat delayed limited code execution. Injecting a more elaborate payload might also be possible, not just a single command. Also abusing SSH flags like <code class="language-plaintext highlighter-rouge">-F</code> to provide a config file, an attacker could also abuse an already existing local file on the target’s device to achieve the same.</p>
 
 <p>Patch: <a href="https://gitlab.com/gnachman/iterm2/-/commit/ef7bb84520013b2524df9787d4aa9f2c96746c01">https://gitlab.com/gnachman/iterm2/-/commit/ef7bb84</a></p>
 
@@ -179,7 +179,7 @@
 
 <p><img src="/piptagole/assets/bad-moby-2.png" alt="bad mody 2" /></p>
 
-<p>This was disclosed to Docker in August last year but is still unpatched and in combination with <a href="https://blog.solidsnail.com/posts/2023-08-28-iterm2-rce">other vulnerabilities</a> in terminal emulators may be leveraged as an easy attach vector to abuse.</p>
+<p>This was disclosed to Docker in August last year but is still unpatched and in combination with <a href="https://blog.solidsnail.com/posts/2023-08-28-iterm2-rce">other vulnerabilities</a> in terminal emulators may be leveraged as an easy attack vector to abuse.</p>
 
 <h1 id="other-weaknesses">Other weaknesses</h1>
 
@@ -203,7 +203,7 @@
   <li>Thanks to  George Nachman for maintaining iTerm2 and handling vulnerability reports.</li>
 </ul>
 
-<p>Exploring a similar attack vector on Linux and WIndows terminals might also be worthwhile.</p>
+<p>Exploring a similar attack vector on Linux and Windows terminals might also be worthwhile.</p>
 
 <p><strong>Upgrade to iTerm2 3.5.0</strong>: <a href="https://iterm2.com/downloads.html">https://iterm2.com/downloads.html</a></p>
 
